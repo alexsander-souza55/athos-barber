@@ -34,6 +34,7 @@ class Config:
     REMEMBER_COOKIE_HTTPONLY = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
+    TIMEZONE = "America/Campo_Grande"
 
 
 class DevelopmentConfig(Config):

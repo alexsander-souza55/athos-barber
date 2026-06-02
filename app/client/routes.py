@@ -10,6 +10,17 @@ from app.appointments.availability import get_available_slots, is_slot_available
 client_bp = Blueprint("client", __name__)
 
 
+def _validate_cpf_digits(cpf: str) -> bool:
+    d = re.sub(r'\D', '', cpf or '')
+    if len(d) != 11 or len(set(d)) == 1:
+        return False
+    def _check(n):
+        total = sum(int(d[i]) * (n - i) for i in range(n - 1))
+        r = (total * 10) % 11
+        return r if r < 10 else 0
+    return _check(10) == int(d[9]) and _check(11) == int(d[10])
+
+
 def _clean_cpf(cpf: str) -> str:
     return re.sub(r'\D', '', cpf or '')
 
@@ -218,6 +229,56 @@ def reschedule_appointment(appt_id: int):
     )
 
 
+@client_bp.route("/lookup/json")
+def lookup_json():
+    """AJAX endpoint: busca cliente por CPF e retorna agendamentos como JSON."""
+    cpf_input = request.args.get("cpf", "").strip()
+    date_from = request.args.get("date_from", "").strip()
+    date_to = request.args.get("date_to", "").strip()
+
+    if not _validate_cpf_digits(cpf_input):
+        return jsonify({"error": "CPF inválido. Verifique o número."})
+
+    formatted = _format_cpf(cpf_input)
+    customer = Customer.query.filter_by(cpf=formatted).first()
+
+    if not customer:
+        return jsonify({"error": "CPF não encontrado. Verifique o número ou realize um agendamento."})
+
+    session["client_cpf"] = formatted
+    session["client_date_from"] = date_from
+    session["client_date_to"] = date_to
+
+    appointments = _load_appointments(customer, date_from, date_to)
+    today = date.today()
+
+    return jsonify({
+        "customer": {
+            "name": customer.name,
+            "cpf": customer.cpf,
+            "initials": customer.initials,
+        },
+        "appointments": [
+            {
+                "id": a.id,
+                "status": a.status,
+                "status_label": a.status_label,
+                "date_display": a.scheduled_date.strftime('%d/%m/%Y'),
+                "time": a.scheduled_time.strftime('%H:%M'),
+                "end_time": a.end_time_str or "",
+                "barber_name": a.barber.name if a.barber else "—",
+                "barber_whatsapp_link": a.barber.whatsapp_link if a.barber else None,
+                "service_name": a.service.name if a.service else "—",
+                "service_price": a.service.price_formatted if a.service else "—",
+                "is_past": a.scheduled_date < today,
+                "can_act": a.status in ("pending", "confirmed") and a.scheduled_date >= today,
+                "can_confirm": a.status == "pending" and a.scheduled_date >= today,
+            }
+            for a in appointments
+        ],
+    })
+
+
 @client_bp.route("/slots")
 def slots():
     barber_id = request.args.get("barber_id", type=int)
@@ -236,8 +297,4 @@ def slots():
 
     available = get_available_slots(barber_id, service_id, target_date,
                                     exclude_appointment_id=exclude_id)
-    if target_date == date.today():
-        now = datetime.now().time()
-        available = [t for t in available if t > now]
-
     return jsonify({"slots": [t.strftime("%H:%M") for t in available]})

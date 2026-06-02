@@ -6,250 +6,383 @@
 <div class="row justify-content-center">
   <div class="col-lg-8 col-xl-7">
 
-    <!-- Título -->
-    <div class="text-center mb-4">
-      <h3 class="fw-bold mb-1">Agendar horário</h3>
-      <p class="text-muted small">Siga os passos abaixo para garantir seu horário.</p>
-    </div>
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- LANDING — tela inicial com duas opções                 -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <div id="sec-landing">
 
-    <form method="POST" action="{{ url_for('appointments.book') }}" novalidate id="bookForm">
-      {{ form.hidden_tag() }}
-      <!-- Os HiddenFields service_id, barber_id, scheduled_date, scheduled_time
-           já são renderizados acima pelo hidden_tag() com ids padrão do WTForms.
-           O JS preenche diretamente esses inputs. -->
-
-      <!-- ══════════════════════════════════════════════════ -->
-      <!-- PASSO 1 — Serviço                                  -->
-      <!-- ══════════════════════════════════════════════════ -->
-      <div class="step-card mb-3" id="step1">
-        <div class="step-header">
-          <div class="step-num">1</div>
-          <div>
-            <div class="step-title">Escolha o serviço</div>
-            <div id="lbl_service" class="step-chosen"></div>
-          </div>
-        </div>
-        <div class="step-body" id="body_service">
-          {% if services %}
-          <div class="row g-2 mt-1">
-            {% for s in services %}
-            <div class="col-6 col-md-4">
-              <div class="opt-card"
-                   data-step="service"
-                   data-id="{{ s.id }}"
-                   data-label="{{ s.name }}"
-                   data-duration="{{ s.duration_minutes }}"
-                   data-price="{{ s.price_formatted }}">
-                <div class="opt-name">{{ s.name }}</div>
-                <div class="opt-price">{{ s.price_formatted }}</div>
-                <div class="opt-info">
-                  <i class="bi bi-clock me-1"></i>{{ s.duration_formatted }}
-                </div>
-                {% if s.description %}
-                <div class="opt-desc">{{ s.description | truncate(45) }}</div>
-                {% endif %}
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <p class="text-muted small mt-2">Nenhum serviço disponível no momento.</p>
-          {% endif %}
-        </div>
+      <div class="text-center mb-5 pt-2">
+        <h3 class="fw-bold mb-1" style="font-family:'Playfair Display',serif">
+          Bem-vindo à Athos
+        </h3>
+        <p class="text-muted small">O que deseja fazer?</p>
       </div>
 
-      <!-- ══════════════════════════════════════════════════ -->
-      <!-- PASSO 2 — Barbeiro                                 -->
-      <!-- ══════════════════════════════════════════════════ -->
-      <div class="step-card step-locked mb-3" id="step2">
-        <div class="step-header">
-          <div class="step-num">2</div>
-          <div>
-            <div class="step-title">Escolha o barbeiro</div>
-            <div id="lbl_barber" class="step-chosen"></div>
-          </div>
-          <div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>
-        </div>
-        <div class="step-body" id="body_barber" style="display:none">
-          {% if barbers %}
-          <div class="row g-2 mt-1">
-            {% for b in barbers %}
-            <div class="col-6 col-md-4">
-              <div class="opt-card opt-card-barber"
-                   data-step="barber"
-                   data-id="{{ b.id }}"
-                   data-label="{{ b.name }}">
-                {% if b.photo_url %}
-                <img src="{{ b.photo_url }}" class="barber-thumb mb-2" alt="{{ b.name }}">
-                {% else %}
-                <div class="barber-initials-sm mx-auto mb-2">{{ b.initials }}</div>
-                {% endif %}
-                <div class="opt-name">{{ b.name }}</div>
-                {% if b.specialty %}
-                <div class="opt-info">{{ b.specialty }}</div>
-                {% endif %}
-                {% if b.work_hours_str != '—' %}
-                <div class="opt-info"><i class="bi bi-clock me-1"></i>{{ b.work_hours_str }}</div>
-                {% endif %}
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <p class="text-muted small mt-2">Nenhum barbeiro disponível no momento.</p>
-          {% endif %}
-        </div>
-      </div>
+      <div class="landing-wrap">
 
-      <!-- ══════════════════════════════════════════════════ -->
-      <!-- PASSO 3 — Data                                     -->
-      <!-- ══════════════════════════════════════════════════ -->
-      <div class="step-card step-locked mb-3" id="step3">
-        <div class="step-header">
-          <div class="step-num">3</div>
-          <div>
-            <div class="step-title">Escolha a data</div>
-            <div id="lbl_date" class="step-chosen"></div>
+        <!-- Card: Agendar -->
+        <div class="landing-card" id="landingAgendar" role="button" tabindex="0">
+          <div class="landing-card-icon">
+            <i class="bi bi-calendar-plus"></i>
           </div>
-          <div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>
-        </div>
-        <div class="step-body" id="body_date" style="display:none">
-          <div class="mt-3" style="max-width:220px">
-            <input type="date" id="datePickerInput"
-                   class="form-control bg-dark border-secondary text-light"
-                   min="{{ now.strftime('%Y-%m-%d') }}" />
+          <div class="landing-card-title">Agendar Horário</div>
+          <div class="landing-card-desc">
+            Escolha serviço, barbeiro, data e horário em poucos passos.
+          </div>
+          <div class="landing-card-cta">
+            Agendar agora <i class="bi bi-arrow-right ms-1"></i>
           </div>
         </div>
-      </div>
 
-      <!-- ══════════════════════════════════════════════════ -->
-      <!-- PASSO 4 — Horário                                  -->
-      <!-- ══════════════════════════════════════════════════ -->
-      <div class="step-card step-locked mb-3" id="step4">
-        <div class="step-header">
-          <div class="step-num">4</div>
-          <div>
-            <div class="step-title">Escolha o horário</div>
-            <div id="lbl_time" class="step-chosen"></div>
+        <!-- Separador ornamental -->
+        <div class="landing-sep">
+          <div class="sep-line"></div>
+          <div class="sep-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
+              <line x1="20" y1="4" x2="8.12" y2="15.88"/>
+              <line x1="14.47" y1="14.48" x2="20" y2="20"/>
+              <line x1="8.12" y1="8.12" x2="12" y2="12"/>
+            </svg>
           </div>
-          <div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>
+          <div class="sep-line"></div>
         </div>
-        <div class="step-body" id="body_time" style="display:none">
-          <div id="slots_loading" class="text-muted small mt-3" style="display:none">
-            <span class="spinner-border spinner-border-sm me-1"></span>Verificando disponibilidade...
-          </div>
-          <div id="slots_empty" class="text-warning small mt-3" style="display:none">
-            <i class="bi bi-exclamation-circle me-1"></i>
-            Nenhum horário disponível nesta data. Tente outro dia.
-          </div>
-          <div id="slots_grid" class="d-flex flex-wrap gap-2 mt-3"></div>
-        </div>
-      </div>
 
-      <!-- ══════════════════════════════════════════════════ -->
-      <!-- PASSO 5 — Seus dados                               -->
-      <!-- ══════════════════════════════════════════════════ -->
-      <div class="step-card step-locked mb-3" id="step5">
-        <div class="step-header">
-          <div class="step-num">5</div>
-          <div class="step-title">Seus dados</div>
-          <div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>
-        </div>
-        <div class="step-body" id="body_contact" style="display:none">
-          <div class="row g-3 mt-1">
-            <div class="col-md-6">
-              <label class="form-label fw-semibold small">
-                {{ form.customer_name.label.text }} <span class="text-danger">*</span>
-              </label>
-              {{ form.customer_name(
-                  class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.customer_name.errors else ""),
-                  placeholder="Seu nome completo",
-                  id="inp_name",
-                  autocomplete="name"
-              ) }}
-              {% for e in form.customer_name.errors %}
-              <div class="invalid-feedback">{{ e }}</div>
-              {% endfor %}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold small">
-                {{ form.customer_phone.label.text }} <span class="text-danger">*</span>
-              </label>
-              <div class="input-group">
-                <span class="input-group-text bg-dark border-secondary text-muted">
-                  <i class="bi bi-telephone"></i>
-                </span>
-                {{ form.customer_phone(
-                    class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.customer_phone.errors else ""),
-                    placeholder="(00) 00000-0000",
-                    id="inp_phone",
-                    autocomplete="tel"
-                ) }}
-                {% if form.customer_phone.errors %}
-                  {% for e in form.customer_phone.errors %}
-                  <div class="invalid-feedback">{{ e }}</div>
-                  {% endfor %}
-                {% endif %}
-              </div>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold small">
-                {{ form.customer_cpf.label.text }} <span class="text-danger">*</span>
-              </label>
-              <div class="input-group">
-                <span class="input-group-text bg-dark border-secondary text-muted">
-                  <i class="bi bi-person-vcard"></i>
-                </span>
-                {{ form.customer_cpf(
-                    class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.customer_cpf.errors else ""),
-                    placeholder="000.000.000-00",
-                    id="inp_cpf",
-                    autocomplete="off",
-                    style="font-family:'JetBrains Mono',monospace"
-                ) }}
-                {% if form.customer_cpf.errors %}
-                  {% for e in form.customer_cpf.errors %}
-                  <div class="invalid-feedback">{{ e }}</div>
-                  {% endfor %}
-                {% endif %}
-              </div>
-              <div class="form-text">Permite gerenciar seus agendamentos pelo portal.</div>
-            </div>
-            <div class="col-12">
-              <label class="form-label fw-semibold small">
-                {{ form.notes.label.text }}
-              </label>
-              {{ form.notes(
-                  class="form-control bg-dark border-secondary text-light",
-                  rows=2,
-                  placeholder="Alguma preferência ou informação adicional? (opcional)"
-              ) }}
-            </div>
+        <!-- Card: Verificar -->
+        <div class="landing-card" id="landingVerificar" role="button" tabindex="0">
+          <div class="landing-card-icon">
+            <i class="bi bi-person-lines-fill"></i>
+          </div>
+          <div class="landing-card-title">Verificar Agendamento</div>
+          <div class="landing-card-desc">
+            Consulte, confirme ou cancele seus horários pelo CPF, sem login.
+          </div>
+          <div class="landing-card-cta">
+            Consultar agora <i class="bi bi-arrow-right ms-1"></i>
           </div>
         </div>
-      </div>
 
-      <!-- ══════════════════════════════════════════════════ -->
-      <!-- Resumo + Confirmar                                 -->
-      <!-- ══════════════════════════════════════════════════ -->
-      <div class="summary-card mb-4" id="summaryCard" style="display:none">
-        <div class="summary-title">
-          <i class="bi bi-clipboard-check text-accent me-2"></i>Resumo do agendamento
-        </div>
-        <div class="summary-grid">
-          <span class="text-muted">Serviço</span><span id="sum_service">—</span>
-          <span class="text-muted">Barbeiro</span><span id="sum_barber">—</span>
-          <span class="text-muted">Data</span><span id="sum_date">—</span>
-          <span class="text-muted">Horário</span><span id="sum_time">—</span>
-        </div>
       </div>
+    </div><!-- /sec-landing -->
 
-      <button type="submit" id="btnConfirm"
-              class="btn btn-gold w-100 py-3 fw-bold fs-5" disabled>
-        <i class="bi bi-calendar-check me-2"></i>Confirmar agendamento
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- BOOKING — formulário step-by-step                      -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <div id="sec-booking" class="sec-panel" style="display:none">
+
+      <button type="button" class="back-btn mb-4" id="backFromBooking">
+        <i class="bi bi-arrow-left me-2"></i>Voltar
       </button>
 
-    </form>
+      <div class="text-center mb-4">
+        <h3 class="fw-bold mb-1" style="font-family:'Playfair Display',serif">
+          Agendar horário
+        </h3>
+        <p class="text-muted small">Siga os passos abaixo para garantir seu horário.</p>
+      </div>
+
+      <form method="POST" action="{{ url_for('appointments.book') }}" novalidate id="bookForm">
+        {{ form.hidden_tag() }}
+
+        <!-- PASSO 1 — Serviço -->
+        <div class="step-card mb-3" id="step1">
+          <div class="step-header">
+            <div class="step-num">1</div>
+            <div>
+              <div class="step-title">Escolha o serviço</div>
+              <div id="lbl_service" class="step-chosen"></div>
+            </div>
+          </div>
+          <div class="step-body" id="body_service">
+            {% if services %}
+            <div class="row g-2 mt-1">
+              {% for s in services %}
+              <div class="col-6 col-md-4">
+                <div class="opt-card"
+                     data-step="service"
+                     data-id="{{ s.id }}"
+                     data-label="{{ s.name }}"
+                     data-duration="{{ s.duration_minutes }}"
+                     data-price="{{ s.price_formatted }}">
+                  <div class="opt-name">{{ s.name }}</div>
+                  <div class="opt-price">{{ s.price_formatted }}</div>
+                  <div class="opt-info">
+                    <i class="bi bi-clock me-1"></i>{{ s.duration_formatted }}
+                  </div>
+                  {% if s.description %}
+                  <div class="opt-desc">{{ s.description | truncate(45) }}</div>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted small mt-2">Nenhum serviço disponível no momento.</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- PASSO 2 — Barbeiro -->
+        <div class="step-card step-locked mb-3" id="step2">
+          <div class="step-header">
+            <div class="step-num">2</div>
+            <div>
+              <div class="step-title">Escolha o barbeiro</div>
+              <div id="lbl_barber" class="step-chosen"></div>
+            </div>
+            <div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>
+          </div>
+          <div class="step-body" id="body_barber" style="display:none">
+            {% if barbers %}
+            <div class="row g-2 mt-1">
+              {% for b in barbers %}
+              <div class="col-6 col-md-4">
+                <div class="opt-card opt-card-barber"
+                     data-step="barber"
+                     data-id="{{ b.id }}"
+                     data-label="{{ b.name }}">
+                  {% if b.photo_url %}
+                  <img src="{{ b.photo_url }}" class="barber-thumb mb-2" alt="{{ b.name }}">
+                  {% else %}
+                  <div class="barber-initials-sm mx-auto mb-2">{{ b.initials }}</div>
+                  {% endif %}
+                  <div class="opt-name">{{ b.name }}</div>
+                  {% if b.specialty %}
+                  <div class="opt-info">{{ b.specialty }}</div>
+                  {% endif %}
+                  {% if b.work_hours_str != '—' %}
+                  <div class="opt-info"><i class="bi bi-clock me-1"></i>{{ b.work_hours_str }}</div>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted small mt-2">Nenhum barbeiro disponível no momento.</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- PASSO 3 — Data -->
+        <div class="step-card step-locked mb-3" id="step3">
+          <div class="step-header">
+            <div class="step-num">3</div>
+            <div>
+              <div class="step-title">Escolha a data</div>
+              <div id="lbl_date" class="step-chosen"></div>
+            </div>
+            <div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>
+          </div>
+          <div class="step-body" id="body_date" style="display:none">
+            <div class="mt-3" style="max-width:220px">
+              <input type="date" id="datePickerInput"
+                     class="form-control bg-dark border-secondary text-light"
+                     min="{{ now.strftime('%Y-%m-%d') }}" />
+            </div>
+          </div>
+        </div>
+
+        <!-- PASSO 4 — Horário -->
+        <div class="step-card step-locked mb-3" id="step4">
+          <div class="step-header">
+            <div class="step-num">4</div>
+            <div>
+              <div class="step-title">Escolha o horário</div>
+              <div id="lbl_time" class="step-chosen"></div>
+            </div>
+            <div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>
+          </div>
+          <div class="step-body" id="body_time" style="display:none">
+            <div id="slots_loading" class="text-muted small mt-3" style="display:none">
+              <span class="spinner-border spinner-border-sm me-1"></span>Verificando disponibilidade...
+            </div>
+            <div id="slots_empty" class="text-warning small mt-3" style="display:none">
+              <i class="bi bi-exclamation-circle me-1"></i>
+              Nenhum horário disponível nesta data. Tente outro dia.
+            </div>
+            <div id="slots_grid" class="d-flex flex-wrap gap-2 mt-3"></div>
+          </div>
+        </div>
+
+        <!-- PASSO 5 — Seus dados -->
+        <div class="step-card step-locked mb-3" id="step5">
+          <div class="step-header">
+            <div class="step-num">5</div>
+            <div class="step-title">Seus dados</div>
+            <div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>
+          </div>
+          <div class="step-body" id="body_contact" style="display:none">
+            <div class="row g-3 mt-1">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">
+                  {{ form.customer_name.label.text }} <span class="text-danger">*</span>
+                </label>
+                {{ form.customer_name(
+                    class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.customer_name.errors else ""),
+                    placeholder="Seu nome completo",
+                    id="inp_name",
+                    autocomplete="name"
+                ) }}
+                {% for e in form.customer_name.errors %}
+                <div class="invalid-feedback">{{ e }}</div>
+                {% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">
+                  {{ form.customer_phone.label.text }} <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-dark border-secondary text-muted">
+                    <i class="bi bi-telephone"></i>
+                  </span>
+                  {{ form.customer_phone(
+                      class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.customer_phone.errors else ""),
+                      placeholder="(00) 00000-0000",
+                      id="inp_phone",
+                      autocomplete="tel"
+                  ) }}
+                  {% if form.customer_phone.errors %}
+                    {% for e in form.customer_phone.errors %}
+                    <div class="invalid-feedback">{{ e }}</div>
+                    {% endfor %}
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">
+                  {{ form.customer_cpf.label.text }} <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-dark border-secondary text-muted">
+                    <i class="bi bi-person-vcard"></i>
+                  </span>
+                  {{ form.customer_cpf(
+                      class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.customer_cpf.errors else ""),
+                      placeholder="000.000.000-00",
+                      id="inp_cpf",
+                      autocomplete="off",
+                      style="font-family:'JetBrains Mono',monospace"
+                  ) }}
+                  {% if form.customer_cpf.errors %}
+                    {% for e in form.customer_cpf.errors %}
+                    <div class="invalid-feedback">{{ e }}</div>
+                    {% endfor %}
+                  {% endif %}
+                </div>
+                <div class="form-text">Permite gerenciar seus agendamentos pelo portal.</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold small">
+                  {{ form.notes.label.text }}
+                </label>
+                {{ form.notes(
+                    class="form-control bg-dark border-secondary text-light",
+                    rows=2,
+                    placeholder="Alguma preferência ou informação adicional? (opcional)"
+                ) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resumo + Confirmar -->
+        <div class="summary-card mb-4" id="summaryCard" style="display:none">
+          <div class="summary-title">
+            <i class="bi bi-clipboard-check text-accent me-2"></i>Resumo do agendamento
+          </div>
+          <div class="summary-grid">
+            <span class="text-muted">Serviço</span><span id="sum_service">—</span>
+            <span class="text-muted">Barbeiro</span><span id="sum_barber">—</span>
+            <span class="text-muted">Data</span><span id="sum_date">—</span>
+            <span class="text-muted">Horário</span><span id="sum_time">—</span>
+          </div>
+        </div>
+
+        <button type="submit" id="btnConfirm"
+                class="btn btn-gold w-100 py-3 fw-bold fs-5" disabled>
+          <i class="bi bi-calendar-check me-2"></i>Confirmar agendamento
+        </button>
+
+      </form>
+    </div><!-- /sec-booking -->
+
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- LOOKUP — verificar agendamento por CPF                 -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <div id="sec-lookup" class="sec-panel" style="display:none">
+
+      <button type="button" class="back-btn mb-4" id="backFromLookup">
+        <i class="bi bi-arrow-left me-2"></i>Voltar
+      </button>
+
+      <div class="text-center mb-4">
+        <h3 class="fw-bold mb-1" style="font-family:'Playfair Display',serif">
+          Verificar Agendamento
+        </h3>
+        <p class="text-muted small">Informe seu CPF para consultar e gerenciar seus horários.</p>
+      </div>
+
+      <!-- Formulário de busca -->
+      <div class="lookup-search-card mb-4">
+        <label class="form-label fw-semibold small mb-2">
+          <i class="bi bi-person-vcard me-1 text-accent"></i>CPF <span class="text-danger">*</span>
+        </label>
+        <div class="d-flex gap-2">
+          <input type="text" id="lookupCpf"
+                 class="form-control bg-dark border-secondary text-light"
+                 placeholder="000.000.000-00" maxlength="14" autocomplete="off"
+                 style="font-family:'JetBrains Mono',monospace">
+          <button type="button" id="btnLookup" class="btn btn-gold px-4">
+            <i class="bi bi-search me-1"></i>Buscar
+          </button>
+        </div>
+        <div id="lookupError" class="text-danger small mt-2" style="display:none"></div>
+      </div>
+
+      <!-- Área de resultados (preenchida via JS) -->
+      <div id="lookupResults"></div>
+
+      <!-- Link para portal completo -->
+      <div class="text-center mt-4 pt-3" style="border-top:1px solid var(--c-border)">
+        <a href="{{ url_for('client.lookup') }}" class="text-muted small">
+          <i class="bi bi-box-arrow-up-right me-1"></i>Abrir portal completo de agendamentos
+        </a>
+      </div>
+
+    </div><!-- /sec-lookup -->
+
+  </div>
+</div>
+
+<!-- Modal de cancelamento (compartilhado com lookup) -->
+<div class="modal fade" id="cancelModalBook" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background:var(--c-bg-2);border:1px solid rgba(204,31,31,.35)">
+      <div class="modal-header" style="border-color:rgba(204,31,31,.2)">
+        <h6 class="modal-title text-danger fw-bold">
+          <i class="bi bi-exclamation-triangle me-2"></i>Cancelar agendamento?
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-muted small">
+        <p class="mb-1" id="cancelModalText"></p>
+        <p class="mb-0">Esta ação não pode ser desfeita.</p>
+      </div>
+      <div class="modal-footer" style="border-color:rgba(204,31,31,.2)">
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Voltar</button>
+        <form id="cancelModalForm" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="cpf" id="cancelModalCpf">
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="bi bi-x-circle me-1"></i>Cancelar agendamento
+          </button>
+        </form>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -257,6 +390,223 @@
 
 {% block extra_css %}
 <style>
+/* ── Transições de seção ──────────────────────────────── */
+.sec-panel {
+  animation: fadeInUp .25s ease both;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Botão voltar ─────────────────────────────────────── */
+.back-btn {
+  background: none; border: none; padding: 0;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .75rem; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--c-text-muted);
+  cursor: pointer; transition: color .12s;
+  display: inline-flex; align-items: center;
+}
+.back-btn:hover { color: var(--c-text-2); }
+
+/* ── Landing cards ────────────────────────────────────── */
+.landing-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+@media (min-width: 576px) {
+  .landing-wrap {
+    flex-direction: row;
+    align-items: stretch;
+  }
+}
+
+.landing-card {
+  flex: 1;
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 32px 28px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, transform .15s;
+  text-align: center;
+  user-select: none;
+}
+.landing-card:hover {
+  border-color: rgba(204,31,31,.55);
+  background: rgba(204,31,31,.04);
+  transform: translateY(-2px);
+}
+.landing-card:active { transform: translateY(0); }
+.landing-card:focus-visible {
+  outline: 2px solid var(--c-red);
+  outline-offset: 2px;
+}
+
+.landing-card-icon {
+  font-size: 2.2rem;
+  color: var(--c-red);
+  margin-bottom: 14px;
+  opacity: .85;
+}
+.landing-card-title {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700; font-size: 1.05rem;
+  color: var(--c-text); margin-bottom: 8px;
+}
+.landing-card-desc {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .78rem; color: var(--c-text-muted);
+  line-height: 1.5; margin-bottom: 16px;
+}
+.landing-card-cta {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .72rem; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--c-red); opacity: .8;
+}
+
+/* ── Separador ornamental ─────────────────────────────── */
+.landing-sep {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 0;
+}
+@media (min-width: 576px) {
+  .landing-sep {
+    flex-direction: column;
+    padding: 0 16px;
+    align-self: stretch;
+    justify-content: center;
+  }
+}
+.sep-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(204,31,31,.25), transparent);
+}
+@media (min-width: 576px) {
+  .sep-line {
+    width: 1px; height: auto; flex: 1;
+    background: linear-gradient(to bottom, transparent, rgba(204,31,31,.25), transparent);
+  }
+}
+.sep-icon {
+  color: var(--c-red); opacity: .45;
+  flex-shrink: 0;
+}
+
+/* ── Lookup search card ───────────────────────────────── */
+.lookup-search-card {
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 22px 24px;
+}
+
+/* ── Appointment cards (lookup results) ──────────────── */
+.appt-card-b {
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-border);
+  border-left: 3px solid rgba(204,31,31,.5);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  transition: border-color .15s;
+}
+.appt-card-b:not(.appt-past-b):hover { border-left-color: var(--c-red); }
+.appt-card-b.appt-past-b { opacity: .6; border-left-color: var(--c-border); }
+.appt-card-b.appt-pending-b {
+  border-left-color: var(--c-red);
+  box-shadow: 0 0 0 0 rgba(204,31,31,.4);
+  animation: pulse-appt 2.2s infinite;
+}
+@keyframes pulse-appt {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(204,31,31,.3); }
+  50%       { box-shadow: 0 0 0 5px rgba(204,31,31,.0); }
+}
+
+.appt-card-b-header {
+  display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  padding: 10px 14px;
+  background: #0d0d0d;
+  border-bottom: 1px solid var(--c-border);
+}
+.appt-datetime-b {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .78rem; color: var(--c-text-2);
+}
+.appt-wa-link-b {
+  display: flex; align-items: center; gap: 4px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .7rem; font-weight: 600;
+  color: #25D366; text-decoration: none;
+}
+.appt-wa-link-b:hover { opacity: .8; }
+
+.appt-card-b-body {
+  padding: 12px 14px;
+  display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.appt-details-b { display: flex; gap: 20px; flex-wrap: wrap; }
+.appt-label-b {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .63rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--c-text-muted); display: block; margin-bottom: 2px;
+}
+.appt-value-b {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .8rem; color: var(--c-text);
+}
+
+.appt-actions-b { display: flex; gap: 5px; flex-wrap: wrap; }
+.btn-appt-b {
+  padding: 4px 11px; border-radius: 2px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .7rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; cursor: pointer;
+  border: 1px solid; background: transparent;
+  transition: background .12s, color .12s;
+  text-decoration: none; display: inline-flex; align-items: center;
+}
+.btn-appt-confirm-b { border-color: rgba(25,135,84,.5); color: #198754; }
+.btn-appt-confirm-b:hover { background: rgba(25,135,84,.12); }
+.btn-appt-rsch-b { border-color: rgba(232,232,224,.25); color: var(--c-text-2); }
+.btn-appt-rsch-b:hover { background: rgba(255,255,255,.05); }
+.btn-appt-cancel-b { border-color: rgba(204,31,31,.4); color: var(--c-red); }
+.btn-appt-cancel-b:hover { background: rgba(204,31,31,.08); }
+
+/* ── Badges ───────────────────────────────────────────── */
+.status-badge {
+  display: inline-block;
+  padding: 2px 9px; border-radius: 2px; border: 1px solid;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .65rem; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.badge-pending   { border-color: rgba(255,193,7,.4);   color: #ffc107;  background: rgba(255,193,7,.08); }
+.badge-confirmed { border-color: rgba(25,135,84,.4);   color: #198754;  background: rgba(25,135,84,.08); }
+.badge-completed { border-color: rgba(108,117,125,.3); color: #6c757d;  background: transparent; }
+.badge-cancelled { border-color: rgba(220,53,69,.3);   color: #dc3545;  background: transparent; }
+.badge-no_show   { border-color: rgba(108,117,125,.3); color: #6c757d;  background: transparent; }
+
+/* ── Customer avatar (lookup) ─────────────────────────── */
+.lookup-avatar-b {
+  width: 48px; height: 48px; border-radius: 4px;
+  background: #1a1a1a; border: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-weight: 700; font-size: 1.1rem; color: var(--c-text-2);
+  flex-shrink: 0;
+}
+
 /* ── Wizard steps ─────────────────────────────────────── */
 .step-card {
   background: var(--c-bg-2);
@@ -380,7 +730,217 @@
 
 {% block extra_js %}
 <script>
-// ── Estado do wizard ─────────────────────────────────────
+const CSRF_TOKEN = "{{ csrf_token() }}";
+const TODAY_STR  = "{{ now.strftime('%Y-%m-%d') }}";
+
+// ═══════════════════════════════════════════════════════════
+// NAVEGAÇÃO ENTRE SEÇÕES
+// ═══════════════════════════════════════════════════════════
+function showSec(id) {
+  ['sec-landing', 'sec-booking', 'sec-lookup'].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.style.display = 'none';
+  });
+  const target = document.getElementById(id);
+  if (target) { target.style.display = 'block'; }
+}
+
+document.getElementById('landingAgendar').addEventListener('click',   () => { showSec('sec-booking'); history.replaceState(null,'','#agendar'); });
+document.getElementById('landingVerificar').addEventListener('click',  () => { showSec('sec-lookup');  history.replaceState(null,'','#verificar'); });
+document.getElementById('backFromBooking').addEventListener('click',   () => { showSec('sec-landing'); history.replaceState(null,'',''); });
+document.getElementById('backFromLookup').addEventListener('click',    () => { showSec('sec-landing'); history.replaceState(null,'',''); });
+
+// Keyboard support for landing cards
+['landingAgendar','landingVerificar'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
+  });
+});
+
+// Hash routing on load
+(function() {
+  const h = location.hash;
+  if (h === '#agendar')   showSec('sec-booking');
+  else if (h === '#verificar') showSec('sec-lookup');
+})();
+
+
+// ═══════════════════════════════════════════════════════════
+// LOOKUP — validação e AJAX
+// ═══════════════════════════════════════════════════════════
+function validateCPF(cpf) {
+  const d = cpf.replace(/\D/g, '');
+  if (d.length !== 11 || /^(.)\1+$/.test(d)) return false;
+  const check = n => {
+    const total = Array.from(d).slice(0, n-1).reduce((s, v, i) => s + parseInt(v) * (n - i), 0);
+    const r = (total * 10) % 11;
+    return (r < 10 ? r : 0) === parseInt(d[n-1]);
+  };
+  return check(10) && check(11);
+}
+
+const lookupCpfEl  = document.getElementById('lookupCpf');
+const lookupErrEl  = document.getElementById('lookupError');
+const lookupResEl  = document.getElementById('lookupResults');
+
+// Máscara de CPF
+if (lookupCpfEl) {
+  lookupCpfEl.addEventListener('input', function () {
+    let v = this.value.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 9)      v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+    else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
+    else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, '$1.$2');
+    this.value = v;
+  });
+  lookupCpfEl.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btnLookup').click(); });
+}
+
+document.getElementById('btnLookup').addEventListener('click', function () {
+  const cpf = lookupCpfEl.value.trim();
+  lookupErrEl.style.display = 'none';
+
+  if (!validateCPF(cpf)) {
+    lookupErrEl.textContent = 'CPF inválido. Verifique o número.';
+    lookupErrEl.style.display = 'block';
+    return;
+  }
+
+  this.disabled = true;
+  this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Buscando...';
+
+  fetch('/client/lookup/json?cpf=' + encodeURIComponent(cpf))
+    .then(r => r.json())
+    .then(data => {
+      this.disabled = false;
+      this.innerHTML = '<i class="bi bi-search me-1"></i>Buscar';
+      if (data.error) {
+        lookupErrEl.textContent = data.error;
+        lookupErrEl.style.display = 'block';
+        lookupResEl.innerHTML = '';
+        return;
+      }
+      renderLookupResults(data);
+    })
+    .catch(() => {
+      this.disabled = false;
+      this.innerHTML = '<i class="bi bi-search me-1"></i>Buscar';
+      lookupErrEl.textContent = 'Erro de conexão. Tente novamente.';
+      lookupErrEl.style.display = 'block';
+    });
+});
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderLookupResults(data) {
+  const cpf = data.customer.cpf;
+  let html = `
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <div class="lookup-avatar-b">${escHtml(data.customer.initials)}</div>
+    <div>
+      <div class="fw-bold" style="font-family:'Playfair Display',serif;font-size:1rem">${escHtml(data.customer.name)}</div>
+      <div class="text-muted small" style="font-family:'JetBrains Mono',monospace">${escHtml(data.customer.cpf)}</div>
+    </div>
+    <div class="ms-auto">
+      <span class="status-badge" style="border-color:rgba(232,232,224,.25);color:var(--c-white)">
+        ${data.appointments.length} agendamento(s)
+      </span>
+    </div>
+  </div>`;
+
+  if (data.appointments.length === 0) {
+    html += `<div class="text-center py-4 text-muted small">
+      <i class="bi bi-calendar-x d-block mb-2" style="font-size:2rem;opacity:.4"></i>
+      Nenhum agendamento encontrado.
+    </div>`;
+  } else {
+    data.appointments.forEach(a => { html += renderApptCard(a, cpf); });
+  }
+
+  lookupResEl.innerHTML = html;
+  lookupResEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function renderApptCard(a, cpf) {
+  const badgeCls = 'badge-' + a.status;
+  const pendingBadge = a.status === 'pending'
+    ? `<span class="status-badge ms-1" style="border-color:rgba(255,193,7,.5);color:#ffc107;background:rgba(255,193,7,.1);font-size:.6rem">Aguardando confirmação</span>`
+    : '';
+
+  const waLink = a.barber_whatsapp_link
+    ? `<a href="${escHtml(a.barber_whatsapp_link)}" target="_blank" rel="noopener" class="appt-wa-link-b">
+         <i class="bi bi-whatsapp"></i>${escHtml(a.barber_name)}
+       </a>`
+    : '';
+
+  const cardCls = 'appt-card-b' + (a.is_past ? ' appt-past-b' : '') + (a.status === 'pending' && !a.is_past ? ' appt-pending-b' : '');
+
+  let actions = '';
+  if (a.can_act) {
+    if (a.can_confirm) {
+      actions += `<form method="POST" action="/client/appointment/${a.id}/confirm" class="d-inline">
+        <input type="hidden" name="csrf_token" value="${escHtml(CSRF_TOKEN)}">
+        <input type="hidden" name="cpf" value="${escHtml(cpf)}">
+        <button type="submit" class="btn-appt-b btn-appt-confirm-b">
+          <i class="bi bi-check-circle me-1"></i>Confirmar
+        </button>
+      </form>`;
+    }
+    actions += `<a href="/client/appointment/${a.id}/reschedule" class="btn-appt-b btn-appt-rsch-b">
+      <i class="bi bi-calendar-event me-1"></i>Remarcar
+    </a>`;
+    actions += `<button type="button" class="btn-appt-b btn-appt-cancel-b"
+      onclick="openCancelModal(${a.id},'${escHtml(cpf).replace(/'/g,"\\'")}','${escHtml(a.barber_name).replace(/'/g,"\\'")}','${a.date_display}','${a.time}')">
+      <i class="bi bi-x-circle me-1"></i>Cancelar
+    </button>`;
+  }
+
+  return `<div class="${cardCls}">
+    <div class="appt-card-b-header">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="status-badge ${badgeCls}">${escHtml(a.status_label)}</span>
+        ${pendingBadge}
+        <span class="appt-datetime-b">
+          <i class="bi bi-calendar3 me-1"></i>${a.date_display}
+          &nbsp;·&nbsp;<i class="bi bi-clock me-1"></i>${a.time}
+          ${a.end_time ? '– ' + escHtml(a.end_time) : ''}
+        </span>
+      </div>
+      ${waLink}
+    </div>
+    <div class="appt-card-b-body">
+      <div class="appt-details-b">
+        <div>
+          <span class="appt-label-b">Barbeiro</span>
+          <span class="appt-value-b">${escHtml(a.barber_name)}</span>
+        </div>
+        <div>
+          <span class="appt-label-b">Serviço</span>
+          <span class="appt-value-b">${escHtml(a.service_name)}</span>
+        </div>
+        <div>
+          <span class="appt-label-b">Valor</span>
+          <span class="appt-value-b" style="font-family:'JetBrains Mono',monospace">${escHtml(a.service_price)}</span>
+        </div>
+      </div>
+      ${actions ? `<div class="appt-actions-b">${actions}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function openCancelModal(id, cpf, barber, date, time) {
+  document.getElementById('cancelModalText').textContent =
+    date + ' às ' + time + ' com ' + barber;
+  document.getElementById('cancelModalForm').action = '/client/appointment/' + id + '/cancel';
+  document.getElementById('cancelModalCpf').value = cpf;
+  new bootstrap.Modal(document.getElementById('cancelModalBook')).show();
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// WIZARD DE AGENDAMENTO
+// ═══════════════════════════════════════════════════════════
 const state = {
   serviceId: '', serviceName: '', serviceDuration: 0, servicePrice: '',
   barberId: '', barberName: '',
@@ -388,14 +948,12 @@ const state = {
   time: '',
 };
 
-// ── Referências DOM ──────────────────────────────────────
 const $ = id => document.getElementById(id);
 const inpService = $('service_id');
 const inpBarber  = $('barber_id');
 const inpDate    = $('scheduled_date');
 const inpTime    = $('scheduled_time');
 
-// ── Utilitários ──────────────────────────────────────────
 function unlockStep(num) {
   const el = $(`step${num}`);
   el.classList.remove('step-locked');
@@ -414,7 +972,6 @@ function markDone(num, label) {
 }
 
 function resetFrom(fromNum) {
-  // Reset steps fromNum onwards
   if (fromNum <= 2) {
     state.barberId = ''; state.barberName = '';
     inpBarber.value = '';
@@ -443,7 +1000,6 @@ function resetFrom(fromNum) {
   }
 }
 
-// ── Passo 1: Serviço ─────────────────────────────────────
 document.querySelectorAll('[data-step="service"]').forEach(card => {
   card.addEventListener('click', function () {
     document.querySelectorAll('[data-step="service"]').forEach(c => c.classList.remove('selected'));
@@ -460,7 +1016,6 @@ document.querySelectorAll('[data-step="service"]').forEach(card => {
   });
 });
 
-// ── Passo 2: Barbeiro ────────────────────────────────────
 document.querySelectorAll('[data-step="barber"]').forEach(card => {
   card.addEventListener('click', function () {
     document.querySelectorAll('[data-step="barber"]').forEach(c => c.classList.remove('selected'));
@@ -475,14 +1030,12 @@ document.querySelectorAll('[data-step="barber"]').forEach(card => {
   });
 });
 
-// ── Passo 3: Data ────────────────────────────────────────
 const datePicker = $('datePickerInput');
 if (datePicker) {
   datePicker.addEventListener('change', function () {
     if (!this.value) return;
     state.date = this.value;
     inpDate.value = state.date;
-    // Display date in pt-BR format
     const [y, m, d] = this.value.split('-');
     state.dateDisplay = `${d}/${m}/${y}`;
     markDone(3, state.dateDisplay);
@@ -492,7 +1045,6 @@ if (datePicker) {
   });
 }
 
-// ── Passo 4: Horários via AJAX ───────────────────────────
 function loadSlots() {
   if (!state.barberId || !state.serviceId || !state.date) return;
   const grid  = $('slots_grid');
@@ -506,10 +1058,20 @@ function loadSlots() {
     .then(r => r.json())
     .then(data => {
       spin.style.display = 'none';
-      if (!data.slots || data.slots.length === 0) {
+      let slots = data.slots || [];
+      // Front-end guard: if date is today, remove already-past slots
+      if (state.date === TODAY_STR) {
+        const now = new Date();
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        slots = slots.filter(s => {
+          const [h, m] = s.split(':').map(Number);
+          return h * 60 + m > nowMin;
+        });
+      }
+      if (slots.length === 0) {
         empty.style.display = 'block'; return;
       }
-      data.slots.forEach(slot => {
+      slots.forEach(slot => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'slot-btn';
@@ -533,7 +1095,6 @@ function loadSlots() {
     });
 }
 
-// ── Resumo e botão de confirmar ──────────────────────────
 function updateSummary() {
   if (!state.serviceId) { $('summaryCard').style.display = 'none'; return; }
   $('sum_service').textContent = state.serviceName + (state.servicePrice ? ` — ${state.servicePrice}` : '');
@@ -551,7 +1112,6 @@ function updateConfirmBtn() {
   $('btnConfirm').disabled = !allSet;
 }
 
-// Máscara de CPF
 const cpfEl = $('inp_cpf');
 if (cpfEl) {
   cpfEl.addEventListener('input', function () {
@@ -569,14 +1129,13 @@ if (cpfEl) {
   if (el) el.addEventListener('input', updateConfirmBtn);
 });
 
-// Loading state no submit — evita double-submit e dá feedback imediato
 document.getElementById('bookForm').addEventListener('submit', function () {
   const btn = $('btnConfirm');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Agendando...';
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Agendando...';
 });
 
-// ── Restaurar estado se form foi resubmetido com erros ───
+// Restaurar estado se form foi resubmetido com erros
 (function initFromPostData() {
   const svcId = inpService.value;
   if (svcId) {
@@ -586,7 +1145,7 @@ document.getElementById('bookForm').addEventListener('submit', function () {
   const bId = inpBarber.value;
   if (bId) {
     const card = document.querySelector(`[data-step="barber"][data-id="${bId}"]`);
-    if (card) { card.click(); }
+    if (card) card.click();
   }
   const dVal = inpDate.value;
   if (dVal && datePicker) {

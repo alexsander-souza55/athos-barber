@@ -86,6 +86,7 @@
         <tr>
           <th>Cliente</th>
           <th class="d-none d-md-table-cell">Telefone</th>
+          <th class="d-none d-lg-table-cell" style="width:140px">CPF</th>
           <th class="text-center" style="width:90px">Visitas</th>
           <th class="d-none d-md-table-cell" style="width:110px">Cadastro</th>
           <th class="text-end" style="width:110px">Ações</th>
@@ -112,6 +113,9 @@
             {% if c.phone %}
             <i class="bi bi-telephone me-1 text-accent" style="opacity:.7"></i>{{ c.phone }}
             {% else %}—{% endif %}
+          </td>
+          <td class="d-none d-lg-table-cell text-muted small" style="font-family:'JetBrains Mono',monospace;font-size:.78rem">
+            {{ c.cpf if c.cpf else '—' }}
           </td>
           <td class="text-center">
             {% if c.total_visits > 0 %}

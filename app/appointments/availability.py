@@ -12,6 +12,16 @@ Colisão: dois intervalos [A, B) e [C, D) colidem se A < D e B > C.
 """
 from datetime import date, time, datetime, timedelta
 from typing import List
+from zoneinfo import ZoneInfo
+
+
+def _now_local() -> datetime:
+    from flask import current_app
+    try:
+        tz_name = current_app.config.get("TIMEZONE", "America/Campo_Grande")
+    except RuntimeError:
+        tz_name = "America/Campo_Grande"
+    return datetime.now(ZoneInfo(tz_name)).replace(tzinfo=None)
 
 SLOT_INTERVAL_MINUTES = 30
 DEFAULT_WORK_START = time(8, 0)
@@ -79,6 +89,10 @@ def get_available_slots(
         if not has_conflict:
             available.append(cursor.time())
         cursor += timedelta(minutes=SLOT_INTERVAL_MINUTES)
+
+    if target_date == date.today():
+        now = _now_local()
+        available = [t for t in available if datetime.combine(target_date, t) > now]
 
     return available
 
