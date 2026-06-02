@@ -117,7 +117,7 @@
     </div>
   </header>
 
-  <div class="container-fluid px-4 pt-3">
+  <div class="container-fluid px-3 px-md-4 pt-3">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for category, message in messages %}
         {% set bs_cat = "danger" if category in ("error","danger") else category %}
@@ -130,7 +130,7 @@
     {% endwith %}
   </div>
 
-  <main class="container-fluid px-4 py-4 pb-5">
+  <main class="container-fluid px-3 px-md-4 py-4 pb-5">
     {% block content %}{% endblock %}
   </main>
 

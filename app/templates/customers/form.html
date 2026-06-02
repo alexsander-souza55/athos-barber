@@ -63,7 +63,8 @@
                 {{ form.phone(
                     class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.phone.errors else ""),
                     placeholder="(00) 00000-0000",
-                    id="phoneInput"
+                    id="phoneInput",
+                    inputmode="tel"
                 ) }}
                 {% if form.phone.errors %}
                   {% for e in form.phone.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
@@ -82,6 +83,7 @@
                     class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.cpf.errors else ""),
                     placeholder="000.000.000-00",
                     id="cpfInput",
+                    inputmode="numeric",
                     style="font-family:'JetBrains Mono',monospace"
                 ) }}
                 {% if form.cpf.errors %}

@@ -21,11 +21,11 @@
         <tr>
           <th style="width:40px"></th>
           <th>Usuário</th>
-          <th>E-mail</th>
+          <th class="d-none d-md-table-cell">E-mail</th>
           <th>Perfil</th>
           <th class="text-center">Status</th>
-          <th class="text-center">Logins</th>
-          <th>Último acesso</th>
+          <th class="text-center d-none d-lg-table-cell">Logins</th>
+          <th class="d-none d-lg-table-cell">Último acesso</th>
           <th class="text-end">Ações</th>
         </tr>
       </thead>
@@ -46,7 +46,7 @@
           </td>
 
           <!-- E-mail -->
-          <td class="text-muted small">{{ u.email }}</td>
+          <td class="text-muted small d-none d-md-table-cell">{{ u.email }}</td>
 
           <!-- Role badge -->
           <td>
@@ -70,12 +70,12 @@
           </td>
 
           <!-- Logins -->
-          <td class="text-center">
+          <td class="text-center d-none d-lg-table-cell">
             <span class="text-accent fw-semibold">{{ u.login_count or 0 }}</span>
           </td>
 
           <!-- Último acesso -->
-          <td class="text-muted small">
+          <td class="text-muted small d-none d-lg-table-cell">
             {% if u.last_login %}
               {{ u.last_login.strftime('%d/%m/%Y %H:%M') }}
             {% else %}

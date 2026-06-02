@@ -177,9 +177,9 @@
             <div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>
           </div>
           <div class="step-body" id="body_date" style="display:none">
-            <div class="mt-3" style="max-width:220px">
+            <div class="mt-3">
               <input type="date" id="datePickerInput"
-                     class="form-control bg-dark border-secondary text-light"
+                     class="form-control bg-dark border-secondary text-light date-picker-responsive"
                      min="{{ now.strftime('%Y-%m-%d') }}" />
             </div>
           </div>
@@ -242,7 +242,8 @@
                       class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.customer_phone.errors else ""),
                       placeholder="(00) 00000-0000",
                       id="inp_phone",
-                      autocomplete="tel"
+                      autocomplete="tel",
+                      inputmode="tel"
                   ) }}
                   {% if form.customer_phone.errors %}
                     {% for e in form.customer_phone.errors %}
@@ -264,6 +265,7 @@
                       placeholder="000.000.000-00",
                       id="inp_cpf",
                       autocomplete="off",
+                      inputmode="numeric",
                       style="font-family:'JetBrains Mono',monospace"
                   ) }}
                   {% if form.customer_cpf.errors %}
@@ -335,6 +337,7 @@
           <input type="text" id="lookupCpf"
                  class="form-control bg-dark border-secondary text-light"
                  placeholder="000.000.000-00" maxlength="14" autocomplete="off"
+                 inputmode="numeric"
                  style="font-family:'JetBrains Mono',monospace">
           <button type="button" id="btnLookup" class="btn btn-gold px-4">
             <i class="bi bi-search me-1"></i>Buscar
@@ -567,14 +570,21 @@
 }
 
 .appt-actions-b { display: flex; gap: 5px; flex-wrap: wrap; }
+@media (max-width: 575.98px) {
+  .appt-actions-b { width: 100%; }
+  .appt-actions-b .btn-appt-b { flex: 1; justify-content: center; }
+  .appt-card-b-body { flex-direction: column; }
+  .appt-details-b { gap: 12px; }
+}
 .btn-appt-b {
-  padding: 4px 11px; border-radius: 2px;
+  padding: 6px 12px; border-radius: 2px;
   font-family: 'Josefin Sans', sans-serif;
   font-size: .7rem; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; cursor: pointer;
   border: 1px solid; background: transparent;
   transition: background .12s, color .12s;
   text-decoration: none; display: inline-flex; align-items: center;
+  min-height: 36px;
 }
 .btn-appt-confirm-b { border-color: rgba(25,135,84,.5); color: #198754; }
 .btn-appt-confirm-b:hover { background: rgba(25,135,84,.12); }

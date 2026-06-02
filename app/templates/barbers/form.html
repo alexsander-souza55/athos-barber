@@ -136,7 +136,8 @@
                 <div class="col-md-6">
                   <label class="form-label fw-semibold small">{{ form.phone.label.text }}</label>
                   {{ form.phone(class="form-control bg-dark border-secondary text-light",
-                                placeholder="(00) 00000-0000") }}
+                                placeholder="(00) 00000-0000",
+                                inputmode="tel") }}
                 </div>
                 <div class="col-md-6">
                   <label class="form-label fw-semibold small">{{ form.whatsapp.label.text }}</label>
@@ -147,6 +148,7 @@
                     {{ form.whatsapp(class="form-control bg-dark border-secondary text-light",
                                     placeholder="5567999998888",
                                     id="whatsappInput",
+                                    inputmode="tel",
                                     style="font-family:'JetBrains Mono',monospace") }}
                   </div>
                   <div class="form-text">Somente dígitos com código do país (ex: 5567999998888).</div>

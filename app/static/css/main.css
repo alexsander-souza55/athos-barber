@@ -52,7 +52,14 @@
 
 /* ── Base ───────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+
+/* overflow-x: hidden DEVE estar em html E body.
+   Colocar só em body faz o body virar o bloco contenedor de position:fixed
+   em Safari/Chrome mobile — quebra modais Bootstrap após rolar a página. */
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
 
 body {
   font-family: 'Josefin Sans', 'Inter', sans-serif;
@@ -215,7 +222,7 @@ body::before {
 .main-wrapper {
   margin-left: var(--sidebar-w); min-height: 100vh;
   display: flex; flex-direction: column;
-  transition: margin var(--t-base); position: relative; z-index: 1;
+  transition: margin var(--t-base); position: relative;
 }
 
 .topbar {
@@ -667,3 +674,79 @@ hr { border-color: var(--c-border); opacity: 1; }
   .topbar { padding: 0 16px; }
   main.container-fluid { padding-left: 16px !important; padding-right: 16px !important; }
 }
+
+/* ── Extra-small (< 576px) ──────────────────────────────────── */
+@media (max-width: 575.98px) {
+  main.container-fluid { padding-left: 12px !important; padding-right: 12px !important; }
+  .container-fluid.px-4 { padding-left: 12px !important; padding-right: 12px !important; }
+  .stat-card { padding: 14px 12px; }
+  .stat-value { font-size: 1.4rem; }
+  .page-header { margin-bottom: 16px; gap: 8px; }
+  .page-header-title h5 { font-size: 1rem; }
+  .page-header-actions { width: 100%; justify-content: flex-end; }
+  .filter-bar { padding: 8px 12px; gap: 6px; }
+  .empty-state { padding: 40px 16px; }
+  .modal-dialog { margin: 8px; }
+  .modal-content { border-radius: 4px; }
+  /* Tabela: evita overflow */
+  .table-dark th, .table-dark td { padding: 10px 10px; }
+}
+
+/* ── Touch targets mínimos ──────────────────────────────────── */
+/* Botões em colunas de ação em tabelas */
+.table td .btn { min-height: 34px; min-width: 34px; }
+
+/* ── Slot buttons — área de toque adequada ──────────────────── */
+.slot-btn { min-height: 44px; min-width: 60px; }
+
+/* ── Botões de ação nos cards de agendamento (portal) ──────── */
+.btn-appt-b { min-height: 36px; padding: 6px 12px !important; }
+
+/* ── WhatsApp links em tabelas ──────────────────────────────── */
+.table td a[href*="wa.me"] {
+  display: inline-flex; align-items: center;
+  min-height: 34px; min-width: 34px;
+  padding: 4px 6px;
+}
+
+/* ── Modals: scroll interno apenas no body ───────────────────── */
+/* Não sobrescrever max-height nem display do .modal-dialog/.modal-content
+   pois o Bootstrap 5 já gerencia esses valores internamente e alterá-los
+   pode impedir o transitionend do backdrop de disparar corretamente,
+   travando a página (backdrop invisível cobrindo tudo). */
+.modal-body { overflow-y: auto; }
+@media (max-width: 575.98px) {
+  .modal-body { max-height: 60vh; }
+}
+
+/* ── Formulários públicos: campos full-width no mobile ──────── */
+@media (max-width: 575.98px) {
+  .public-main { padding: 1.5rem 0; }
+  .lookup-search-card .d-flex { flex-wrap: nowrap; gap: 8px; }
+  .lookup-search-card input { flex: 1; min-width: 0; }
+}
+
+/* ── Landing cards: padding menor no mobile ─────────────────── */
+@media (max-width: 575.98px) {
+  .landing-card { padding: 24px 20px; }
+}
+
+/* ── Date picker: responsivo ────────────────────────────────── */
+.date-picker-responsive {
+  width: 100%;
+  max-width: 240px;
+}
+@media (max-width: 575.98px) {
+  .date-picker-responsive { max-width: 100%; }
+}
+
+/* ── Botões de exportação: empilhar no mobile ───────────────── */
+@media (max-width: 575.98px) {
+  .report-card { flex-direction: column; gap: 14px; }
+  .report-card .d-flex.gap-2 { flex-wrap: wrap; }
+}
+
+/* ── Chart height wrapper ───────────────────────────────────── */
+.chart-canvas-wrap { position: relative; height: 240px; }
+@media (max-width: 767.98px) { .chart-canvas-wrap { height: 180px; } }
+@media (max-width: 575.98px) { .chart-canvas-wrap { height: 150px; } }

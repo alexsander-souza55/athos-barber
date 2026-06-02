@@ -314,7 +314,9 @@
         </span>
       </div>
       <div class="chart-body">
-        <canvas id="weeklyChart" height="108"></canvas>
+        <div class="chart-canvas-wrap">
+          <canvas id="weeklyChart"></canvas>
+        </div>
       </div>
     </div>
   </div>
@@ -597,6 +599,7 @@ Chart.defaults.font.size   = 11;
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
