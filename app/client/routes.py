@@ -1,4 +1,7 @@
 import re
+import time
+import threading
+from collections import defaultdict
 from datetime import date, datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from app.extensions import db
@@ -8,6 +11,25 @@ from app.models.barber import Barber
 from app.appointments.availability import get_available_slots, is_slot_available
 
 client_bp = Blueprint("client", __name__)
+
+# ── Rate limiting para lookup de CPF ──────────────────────────────────────────
+_lookup_lock = threading.Lock()
+_LOOKUP_HITS: dict = defaultdict(list)
+_RATE_LIMIT  = 10   # tentativas por IP
+_RATE_WINDOW = 60   # segundos
+
+
+def _rate_limited(ip: str) -> bool:
+    """Retorna True se o IP excedeu o limite de buscas por CPF."""
+    now = time.time()
+    cutoff = now - _RATE_WINDOW
+    with _lookup_lock:
+        hits = [t for t in _LOOKUP_HITS[ip] if t > cutoff]
+        _LOOKUP_HITS[ip] = hits
+        if len(hits) >= _RATE_LIMIT:
+            return True
+        _LOOKUP_HITS[ip].append(now)
+    return False
 
 
 def _validate_cpf_digits(cpf: str) -> bool:
@@ -74,6 +96,10 @@ def lookup():
         cpf_input = request.form.get("cpf", "").strip()
         date_from = request.form.get("date_from", "").strip()
         date_to = request.form.get("date_to", "").strip()
+
+        if _rate_limited(request.remote_addr or ""):
+            flash("Muitas tentativas. Aguarde 1 minuto e tente novamente.", "danger")
+            return redirect(url_for("client.lookup"))
 
         clean = _clean_cpf(cpf_input)
         if not cpf_input:
@@ -235,6 +261,9 @@ def lookup_json():
     cpf_input = request.args.get("cpf", "").strip()
     date_from = request.args.get("date_from", "").strip()
     date_to = request.args.get("date_to", "").strip()
+
+    if _rate_limited(request.remote_addr or ""):
+        return jsonify({"error": "Muitas tentativas. Aguarde 1 minuto."}), 429
 
     if not _validate_cpf_digits(cpf_input):
         return jsonify({"error": "CPF inválido. Verifique o número."})

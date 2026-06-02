@@ -50,7 +50,6 @@ def login():
         if not user.check_password(form.password.data):
             user.handle_failed_login()
             db.session.commit()
-            remaining = max(0, 5 - user.failed_attempts)
             if user.is_locked:
                 flash(
                     f"Conta bloqueada por {user.lock_remaining_minutes} minuto(s) "
@@ -58,8 +57,7 @@ def login():
                     "danger",
                 )
             else:
-                msg = f"Senha incorreta. {remaining} tentativa(s) restante(s)." if remaining < 3 else "Usuário ou senha inválidos."
-                flash(msg, "danger")
+                flash("Usuário ou senha inválidos.", "danger")
             return render_template("auth/login.html", form=form)
 
         # Login bem-sucedido

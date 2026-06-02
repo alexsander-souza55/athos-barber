@@ -2,7 +2,7 @@ import os
 from app import create_app
 from app.extensions import db
 
-app = create_app(os.environ.get("FLASK_ENV", "development"))
+app = create_app(os.environ.get("FLASK_CONFIG", "development"))
 
 
 @app.cli.command("init-db")
@@ -69,4 +69,4 @@ def seed():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=app.debug, host="0.0.0.0", port=5000)

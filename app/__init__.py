@@ -20,6 +20,7 @@ def create_app(config_name: str = "default") -> Flask:
     _configure_login_manager()
     _register_error_handlers(app)
     _register_middleware(app)
+    _register_security_headers(app)
     _register_shell_context(app)
     _register_context_processors(app)
     _register_template_filters(app)
@@ -90,6 +91,22 @@ def _register_middleware(app: Flask) -> None:
             logout_user()
             flash("Sua conta foi desativada. Contate o administrador.", "danger")
             return redirect(url_for("auth.login"))
+
+
+def _register_security_headers(app: Flask) -> None:
+    """Adiciona headers de segurança HTTP em todas as respostas."""
+
+    @app.after_request
+    def add_security_headers(response):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if not app.debug:
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
+        return response
 
 
 def _register_error_handlers(app: Flask) -> None:
