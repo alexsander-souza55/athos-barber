@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% set is_edit = action == 'edit' %}
+{% block title %}{% if is_edit %}Editar — {{ service.name }}{% else %}Novo Serviço{% endif %}{% endblock %}
+{% block page_title %}{% if is_edit %}Editar Serviço{% else %}Novo Serviço{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-xl-7 col-lg-8 col-md-10">
+
+    <!-- Breadcrumb -->
+    <nav class="mb-3" aria-label="breadcrumb">
+      <ol class="breadcrumb breadcrumb-dark small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('services.index') }}" class="text-accent">Serviços</a>
+        </li>
+        <li class="breadcrumb-item active">
+          {% if is_edit %}{{ service.name }}{% else %}Novo{% endif %}
+        </li>
+      </ol>
+    </nav>
+
+    <form method="POST" novalidate>
+      {{ form.hidden_tag() }}
+
+      <!-- ═ Dados do serviço ══════════════════════════════ -->
+      <div class="card card-dark mb-4">
+        <div class="card-header">
+          <h6 class="fw-bold mb-0">
+            <i class="bi bi-stars text-accent me-2"></i>
+            {% if is_edit %}Editar serviço{% else %}Cadastrar serviço{% endif %}
+          </h6>
+        </div>
+        <div class="card-body p-4">
+          <div class="row g-3">
+
+            <!-- Nome -->
+            <div class="col-12">
+              <label class="form-label fw-semibold small">
+                {{ form.name.label.text }} <span class="text-danger">*</span>
+              </label>
+              {{ form.name(
+                  class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.name.errors else ""),
+                  placeholder="Ex: Corte Degradê, Barba Completa, Hidratação..."
+              ) }}
+              {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <!-- Preço -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                {{ form.price.label.text }} <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary text-accent fw-bold">R$</span>
+                {{ form.price(
+                    class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.price.errors else ""),
+                    placeholder="0,00", step="0.01", min="0.01"
+                ) }}
+                {% if form.price.errors %}
+                  {% for e in form.price.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Duração -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                {{ form.duration_minutes.label.text }} <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                {{ form.duration_minutes(
+                    class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.duration_minutes.errors else ""),
+                    placeholder="30", min="5", max="480", id="durationInput"
+                ) }}
+                <span class="input-group-text bg-dark border-secondary text-muted">min</span>
+                {% if form.duration_minutes.errors %}
+                  {% for e in form.duration_minutes.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                {% endif %}
+              </div>
+              <div id="durationPreview" class="form-text text-muted mt-1" style="display:none"></div>
+            </div>
+
+            <!-- Descrição -->
+            <div class="col-12">
+              <label class="form-label fw-semibold small">{{ form.description.label.text }}</label>
+              {{ form.description(
+                  class="form-control bg-dark border-secondary text-light",
+                  rows=3,
+                  placeholder="Breve descrição exibida para os clientes ao agendar..."
+              ) }}
+              <div class="form-text">Máx. 500 caracteres.</div>
+              {% for e in form.description.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <!-- Status — somente no edit -->
+            {% if is_edit %}
+            <div class="col-12">
+              <hr class="border-secondary">
+              <div class="form-check form-switch d-flex align-items-center gap-2">
+                {{ form.is_active(class="form-check-input", role="switch", id="isActiveSwitch") }}
+                <label class="form-check-label fw-semibold small" for="isActiveSwitch">
+                  Serviço ativo
+                </label>
+              </div>
+              <div class="form-text text-muted">
+                Serviços inativos não aparecem na lista de opções ao criar agendamentos.
+              </div>
+            </div>
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ═ Ações ════════════════════════════════════════ -->
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-gold px-4 fw-bold">
+          <i class="bi bi-check-circle me-2"></i>
+          {% if is_edit %}Salvar alterações{% else %}Cadastrar serviço{% endif %}
+        </button>
+        <a href="{{ url_for('services.index') }}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.breadcrumb-dark .breadcrumb-item.active { color: #6b7280; }
+.breadcrumb-dark .breadcrumb-item + .breadcrumb-item::before { color: #4b5563; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Preview de duração ───────────────────────────────────
+const durationInput   = document.getElementById("durationInput");
+const durationPreview = document.getElementById("durationPreview");
+
+function updateDurationPreview() {
+  const val = parseInt(durationInput.value, 10);
+  if (!isNaN(val) && val >= 5) {
+    const h = Math.floor(val / 60);
+    const m = val % 60;
+    let txt = "";
+    if (h > 0 && m > 0)     txt = `${h}h ${m}min`;
+    else if (h > 0)          txt = `${h} hora${h > 1 ? "s" : ""}`;
+    else                     txt = `${val} minutos`;
+    durationPreview.innerHTML = `<i class="bi bi-clock text-accent me-1"></i>${txt}`;
+    durationPreview.style.display = "block";
+  } else {
+    durationPreview.style.display = "none";
+  }
+}
+
+if (durationInput) {
+  durationInput.addEventListener("input", updateDurationPreview);
+  updateDurationPreview();
+}
+</script>
+{% endblock %}

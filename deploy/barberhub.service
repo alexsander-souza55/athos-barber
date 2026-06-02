@@ -1,0 +1,41 @@
+[Unit]
+Description=Prospect BarberHub — Gunicorn WSGI
+Documentation=file:/var/www/barberhub/DEPLOY.md
+After=network.target
+
+[Service]
+Type=notify
+
+# Usuário dedicado sem shell de login (segurança)
+User=barberhub
+Group=www-data
+
+WorkingDirectory=/var/www/barberhub
+Environment="PATH=/var/www/barberhub/venv/bin"
+
+# Carrega variáveis do .env (sem exportar para o ambiente global)
+EnvironmentFile=/var/www/barberhub/.env
+
+ExecStart=/var/www/barberhub/venv/bin/gunicorn \
+          --config gunicorn.conf.py \
+          wsgi:app
+
+# Reload graceful (SIGHUP) sem derrubar conexões ativas
+ExecReload=/bin/kill -s HUP $MAINPID
+
+# Aguarda workers terminarem as requisições em andamento (30 s)
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=60
+
+# Hardening mínimo
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

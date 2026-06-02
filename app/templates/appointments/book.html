@@ -1,0 +1,598 @@
+{% extends "base_public.html" %}
+{% block title %}Agendar{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-xl-7">
+
+    <!-- Título -->
+    <div class="text-center mb-4">
+      <h3 class="fw-bold mb-1">Agendar horário</h3>
+      <p class="text-muted small">Siga os passos abaixo para garantir seu horário.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('appointments.book') }}" novalidate id="bookForm">
+      {{ form.hidden_tag() }}
+      <!-- Os HiddenFields service_id, barber_id, scheduled_date, scheduled_time
+           já são renderizados acima pelo hidden_tag() com ids padrão do WTForms.
+           O JS preenche diretamente esses inputs. -->
+
+      <!-- ══════════════════════════════════════════════════ -->
+      <!-- PASSO 1 — Serviço                                  -->
+      <!-- ══════════════════════════════════════════════════ -->
+      <div class="step-card mb-3" id="step1">
+        <div class="step-header">
+          <div class="step-num">1</div>
+          <div>
+            <div class="step-title">Escolha o serviço</div>
+            <div id="lbl_service" class="step-chosen"></div>
+          </div>
+        </div>
+        <div class="step-body" id="body_service">
+          {% if services %}
+          <div class="row g-2 mt-1">
+            {% for s in services %}
+            <div class="col-6 col-md-4">
+              <div class="opt-card"
+                   data-step="service"
+                   data-id="{{ s.id }}"
+                   data-label="{{ s.name }}"
+                   data-duration="{{ s.duration_minutes }}"
+                   data-price="{{ s.price_formatted }}">
+                <div class="opt-name">{{ s.name }}</div>
+                <div class="opt-price">{{ s.price_formatted }}</div>
+                <div class="opt-info">
+                  <i class="bi bi-clock me-1"></i>{{ s.duration_formatted }}
+                </div>
+                {% if s.description %}
+                <div class="opt-desc">{{ s.description | truncate(45) }}</div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-muted small mt-2">Nenhum serviço disponível no momento.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════ -->
+      <!-- PASSO 2 — Barbeiro                                 -->
+      <!-- ══════════════════════════════════════════════════ -->
+      <div class="step-card step-locked mb-3" id="step2">
+        <div class="step-header">
+          <div class="step-num">2</div>
+          <div>
+            <div class="step-title">Escolha o barbeiro</div>
+            <div id="lbl_barber" class="step-chosen"></div>
+          </div>
+          <div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>
+        </div>
+        <div class="step-body" id="body_barber" style="display:none">
+          {% if barbers %}
+          <div class="row g-2 mt-1">
+            {% for b in barbers %}
+            <div class="col-6 col-md-4">
+              <div class="opt-card opt-card-barber"
+                   data-step="barber"
+                   data-id="{{ b.id }}"
+                   data-label="{{ b.name }}">
+                {% if b.photo_url %}
+                <img src="{{ b.photo_url }}" class="barber-thumb mb-2" alt="{{ b.name }}">
+                {% else %}
+                <div class="barber-initials-sm mx-auto mb-2">{{ b.initials }}</div>
+                {% endif %}
+                <div class="opt-name">{{ b.name }}</div>
+                {% if b.specialty %}
+                <div class="opt-info">{{ b.specialty }}</div>
+                {% endif %}
+                {% if b.work_hours_str != '—' %}
+                <div class="opt-info"><i class="bi bi-clock me-1"></i>{{ b.work_hours_str }}</div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-muted small mt-2">Nenhum barbeiro disponível no momento.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════ -->
+      <!-- PASSO 3 — Data                                     -->
+      <!-- ══════════════════════════════════════════════════ -->
+      <div class="step-card step-locked mb-3" id="step3">
+        <div class="step-header">
+          <div class="step-num">3</div>
+          <div>
+            <div class="step-title">Escolha a data</div>
+            <div id="lbl_date" class="step-chosen"></div>
+          </div>
+          <div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>
+        </div>
+        <div class="step-body" id="body_date" style="display:none">
+          <div class="mt-3" style="max-width:220px">
+            <input type="date" id="datePickerInput"
+                   class="form-control bg-dark border-secondary text-light"
+                   min="{{ now.strftime('%Y-%m-%d') }}" />
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════ -->
+      <!-- PASSO 4 — Horário                                  -->
+      <!-- ══════════════════════════════════════════════════ -->
+      <div class="step-card step-locked mb-3" id="step4">
+        <div class="step-header">
+          <div class="step-num">4</div>
+          <div>
+            <div class="step-title">Escolha o horário</div>
+            <div id="lbl_time" class="step-chosen"></div>
+          </div>
+          <div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>
+        </div>
+        <div class="step-body" id="body_time" style="display:none">
+          <div id="slots_loading" class="text-muted small mt-3" style="display:none">
+            <span class="spinner-border spinner-border-sm me-1"></span>Verificando disponibilidade...
+          </div>
+          <div id="slots_empty" class="text-warning small mt-3" style="display:none">
+            <i class="bi bi-exclamation-circle me-1"></i>
+            Nenhum horário disponível nesta data. Tente outro dia.
+          </div>
+          <div id="slots_grid" class="d-flex flex-wrap gap-2 mt-3"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════ -->
+      <!-- PASSO 5 — Seus dados                               -->
+      <!-- ══════════════════════════════════════════════════ -->
+      <div class="step-card step-locked mb-3" id="step5">
+        <div class="step-header">
+          <div class="step-num">5</div>
+          <div class="step-title">Seus dados</div>
+          <div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>
+        </div>
+        <div class="step-body" id="body_contact" style="display:none">
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                {{ form.customer_name.label.text }} <span class="text-danger">*</span>
+              </label>
+              {{ form.customer_name(
+                  class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.customer_name.errors else ""),
+                  placeholder="Seu nome completo",
+                  id="inp_name",
+                  autocomplete="name"
+              ) }}
+              {% for e in form.customer_name.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                {{ form.customer_phone.label.text }} <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary text-muted">
+                  <i class="bi bi-telephone"></i>
+                </span>
+                {{ form.customer_phone(
+                    class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.customer_phone.errors else ""),
+                    placeholder="(00) 00000-0000",
+                    id="inp_phone",
+                    autocomplete="tel"
+                ) }}
+                {% if form.customer_phone.errors %}
+                  {% for e in form.customer_phone.errors %}
+                  <div class="invalid-feedback">{{ e }}</div>
+                  {% endfor %}
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                {{ form.customer_cpf.label.text }} <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary text-muted">
+                  <i class="bi bi-person-vcard"></i>
+                </span>
+                {{ form.customer_cpf(
+                    class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.customer_cpf.errors else ""),
+                    placeholder="000.000.000-00",
+                    id="inp_cpf",
+                    autocomplete="off",
+                    style="font-family:'JetBrains Mono',monospace"
+                ) }}
+                {% if form.customer_cpf.errors %}
+                  {% for e in form.customer_cpf.errors %}
+                  <div class="invalid-feedback">{{ e }}</div>
+                  {% endfor %}
+                {% endif %}
+              </div>
+              <div class="form-text">Permite gerenciar seus agendamentos pelo portal.</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold small">
+                {{ form.notes.label.text }}
+              </label>
+              {{ form.notes(
+                  class="form-control bg-dark border-secondary text-light",
+                  rows=2,
+                  placeholder="Alguma preferência ou informação adicional? (opcional)"
+              ) }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════ -->
+      <!-- Resumo + Confirmar                                 -->
+      <!-- ══════════════════════════════════════════════════ -->
+      <div class="summary-card mb-4" id="summaryCard" style="display:none">
+        <div class="summary-title">
+          <i class="bi bi-clipboard-check text-accent me-2"></i>Resumo do agendamento
+        </div>
+        <div class="summary-grid">
+          <span class="text-muted">Serviço</span><span id="sum_service">—</span>
+          <span class="text-muted">Barbeiro</span><span id="sum_barber">—</span>
+          <span class="text-muted">Data</span><span id="sum_date">—</span>
+          <span class="text-muted">Horário</span><span id="sum_time">—</span>
+        </div>
+      </div>
+
+      <button type="submit" id="btnConfirm"
+              class="btn btn-gold w-100 py-3 fw-bold fs-5" disabled>
+        <i class="bi bi-calendar-check me-2"></i>Confirmar agendamento
+      </button>
+
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Wizard steps ─────────────────────────────────────── */
+.step-card {
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  overflow: hidden;
+  transition: border-color var(--t-base);
+}
+.step-card.step-locked { opacity: .45; pointer-events: none; }
+.step-card.step-done   { border-color: rgba(204,31,31,.35); }
+
+.step-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 20px;
+  background: #0d0d0d;
+  border-bottom: 1px solid var(--c-border);
+}
+.step-num {
+  width: 28px; height: 28px; border-radius: 2px;
+  background: var(--c-red-dim); border: 1px solid rgba(204,31,31,.4);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700; font-size: .82rem; color: var(--c-text-2);
+  flex-shrink: 0;
+}
+.step-card.step-done .step-num {
+  background: var(--c-red); color: #fff; border-color: var(--c-red);
+}
+.step-title {
+  font-family: 'Josefin Sans', sans-serif;
+  font-weight: 700; font-size: .78rem;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--c-text-2);
+}
+.step-chosen {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .72rem; color: var(--c-white);
+  margin-top: 2px;
+}
+.step-lock-icon { color: var(--c-text-muted); font-size: .82rem; }
+.step-body { padding: 16px 20px 20px; }
+
+/* ── Option cards ─────────────────────────────────────── */
+.opt-card {
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 14px 12px;
+  cursor: pointer;
+  transition: border-color var(--t-fast), background var(--t-fast);
+  text-align: center;
+  height: 100%;
+}
+.opt-card:hover { border-color: rgba(204,31,31,.45); background: rgba(204,31,31,.04); }
+.opt-card.selected { border-color: var(--c-white); background: rgba(232,232,224,.05); }
+.opt-name  {
+  font-family: 'Josefin Sans', sans-serif;
+  font-weight: 700; font-size: .85rem;
+  color: var(--c-text); margin-bottom: 4px;
+}
+.opt-price {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--c-white); font-weight: 700; font-size: .95rem;
+}
+.opt-info  {
+  font-family: 'Josefin Sans', sans-serif;
+  color: var(--c-text-muted); font-size: .68rem; margin-top: 4px;
+}
+.opt-desc  {
+  font-family: 'Josefin Sans', sans-serif;
+  color: var(--c-text-muted); font-size: .65rem; margin-top: 4px;
+}
+
+/* ── Barber thumbs ────────────────────────────────────── */
+.barber-thumb {
+  width: 56px; height: 56px; border-radius: 2px;
+  object-fit: cover; border: 1px solid var(--c-border);
+  display: block; margin: 0 auto;
+}
+.barber-initials-sm {
+  width: 56px; height: 56px; border-radius: 2px;
+  background: #1a1a1a; border: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-weight: 700; font-size: 1.1rem; color: var(--c-text-2);
+}
+
+/* ── Slot buttons ─────────────────────────────────────── */
+.slot-btn {
+  padding: 7px 16px; border-radius: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .82rem; font-weight: 500;
+  border: 1px solid var(--c-border); color: var(--c-text-2);
+  background: transparent; cursor: pointer;
+  transition: border-color var(--t-fast), background var(--t-fast), color var(--t-fast);
+}
+.slot-btn:hover { background: var(--c-red-dim); border-color: var(--c-red-border); color: var(--c-text); }
+.slot-btn.selected { background: var(--c-white); color: #0a0a0a; font-weight: 700; border-color: var(--c-white); }
+
+/* ── Summary ──────────────────────────────────────────── */
+.summary-card {
+  background: rgba(204,31,31,.05);
+  border: 1px solid rgba(204,31,31,.22);
+  border-radius: 4px;
+  padding: 20px 24px;
+}
+.summary-title {
+  font-family: 'Josefin Sans', sans-serif;
+  font-weight: 700; font-size: .72rem;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--c-text-2); margin-bottom: 14px;
+}
+.summary-grid {
+  display: grid; grid-template-columns: 110px 1fr; gap: 8px 16px;
+  font-family: 'Josefin Sans', sans-serif; font-size: .85rem;
+}
+.summary-grid span { padding: 2px 0; color: var(--c-text); }
+.summary-grid span:nth-child(odd) { color: var(--c-text-muted); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Estado do wizard ─────────────────────────────────────
+const state = {
+  serviceId: '', serviceName: '', serviceDuration: 0, servicePrice: '',
+  barberId: '', barberName: '',
+  date: '', dateDisplay: '',
+  time: '',
+};
+
+// ── Referências DOM ──────────────────────────────────────
+const $ = id => document.getElementById(id);
+const inpService = $('service_id');
+const inpBarber  = $('barber_id');
+const inpDate    = $('scheduled_date');
+const inpTime    = $('scheduled_time');
+
+// ── Utilitários ──────────────────────────────────────────
+function unlockStep(num) {
+  const el = $(`step${num}`);
+  el.classList.remove('step-locked');
+  const body = el.querySelector('.step-body');
+  if (body) body.style.display = 'block';
+  const lockIcon = el.querySelector('.step-lock-icon');
+  if (lockIcon) lockIcon.style.display = 'none';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function markDone(num, label) {
+  const el = $(`step${num}`);
+  el.classList.add('step-done');
+  const lbl = $(`lbl_${['','service','barber','date','time'][num]}`);
+  if (lbl) lbl.textContent = label;
+}
+
+function resetFrom(fromNum) {
+  // Reset steps fromNum onwards
+  if (fromNum <= 2) {
+    state.barberId = ''; state.barberName = '';
+    inpBarber.value = '';
+    document.querySelectorAll('[data-step="barber"]').forEach(c => c.classList.remove('selected'));
+    $('step2').classList.remove('step-done'); $('lbl_barber').textContent = '';
+    resetFrom(3);
+  }
+  if (fromNum <= 3) {
+    state.date = ''; state.dateDisplay = '';
+    inpDate.value = '';
+    const dp = $('datePickerInput'); if (dp) dp.value = '';
+    $('step3').classList.remove('step-done'); $('lbl_date').textContent = '';
+    resetFrom(4);
+  }
+  if (fromNum <= 4) {
+    state.time = '';
+    inpTime.value = '';
+    $('slots_grid').innerHTML = '';
+    $('slots_empty').style.display = 'none';
+    $('step4').classList.remove('step-done'); $('lbl_time').textContent = '';
+    resetFrom(5);
+  }
+  if (fromNum <= 5) {
+    updateSummary();
+    updateConfirmBtn();
+  }
+}
+
+// ── Passo 1: Serviço ─────────────────────────────────────
+document.querySelectorAll('[data-step="service"]').forEach(card => {
+  card.addEventListener('click', function () {
+    document.querySelectorAll('[data-step="service"]').forEach(c => c.classList.remove('selected'));
+    this.classList.add('selected');
+    const changed = state.serviceId !== this.dataset.id;
+    state.serviceId = this.dataset.id;
+    state.serviceName = this.dataset.label;
+    state.serviceDuration = parseInt(this.dataset.duration, 10);
+    state.servicePrice = this.dataset.price;
+    inpService.value = state.serviceId;
+    markDone(1, `${state.serviceName} — ${state.servicePrice}`);
+    if (changed) resetFrom(2);
+    unlockStep(2);
+  });
+});
+
+// ── Passo 2: Barbeiro ────────────────────────────────────
+document.querySelectorAll('[data-step="barber"]').forEach(card => {
+  card.addEventListener('click', function () {
+    document.querySelectorAll('[data-step="barber"]').forEach(c => c.classList.remove('selected'));
+    this.classList.add('selected');
+    const changed = state.barberId !== this.dataset.id;
+    state.barberId = this.dataset.id;
+    state.barberName = this.dataset.label;
+    inpBarber.value = state.barberId;
+    markDone(2, state.barberName);
+    if (changed) resetFrom(3);
+    unlockStep(3);
+  });
+});
+
+// ── Passo 3: Data ────────────────────────────────────────
+const datePicker = $('datePickerInput');
+if (datePicker) {
+  datePicker.addEventListener('change', function () {
+    if (!this.value) return;
+    state.date = this.value;
+    inpDate.value = state.date;
+    // Display date in pt-BR format
+    const [y, m, d] = this.value.split('-');
+    state.dateDisplay = `${d}/${m}/${y}`;
+    markDone(3, state.dateDisplay);
+    resetFrom(4);
+    unlockStep(4);
+    loadSlots();
+  });
+}
+
+// ── Passo 4: Horários via AJAX ───────────────────────────
+function loadSlots() {
+  if (!state.barberId || !state.serviceId || !state.date) return;
+  const grid  = $('slots_grid');
+  const spin  = $('slots_loading');
+  const empty = $('slots_empty');
+  grid.innerHTML = '';
+  spin.style.display = 'block';
+  empty.style.display = 'none';
+
+  fetch(`/appointments/slots?barber_id=${state.barberId}&service_id=${state.serviceId}&date=${state.date}`)
+    .then(r => r.json())
+    .then(data => {
+      spin.style.display = 'none';
+      if (!data.slots || data.slots.length === 0) {
+        empty.style.display = 'block'; return;
+      }
+      data.slots.forEach(slot => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'slot-btn';
+        btn.textContent = slot;
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+          this.classList.add('selected');
+          state.time = slot;
+          inpTime.value = slot;
+          markDone(4, slot);
+          unlockStep(5);
+          updateSummary();
+          updateConfirmBtn();
+        });
+        grid.appendChild(btn);
+      });
+    })
+    .catch(() => {
+      spin.style.display = 'none';
+      empty.style.display = 'block';
+    });
+}
+
+// ── Resumo e botão de confirmar ──────────────────────────
+function updateSummary() {
+  if (!state.serviceId) { $('summaryCard').style.display = 'none'; return; }
+  $('sum_service').textContent = state.serviceName + (state.servicePrice ? ` — ${state.servicePrice}` : '');
+  $('sum_barber').textContent  = state.barberName || '—';
+  $('sum_date').textContent    = state.dateDisplay || '—';
+  $('sum_time').textContent    = state.time || '—';
+  $('summaryCard').style.display = 'block';
+}
+
+function updateConfirmBtn() {
+  const nameOk  = ($('inp_name')  || {value:''}).value.trim().length >= 2;
+  const phoneOk = ($('inp_phone') || {value:''}).value.trim().length >= 5;
+  const cpfOk   = ($('inp_cpf')   || {value:''}).value.replace(/\D/g,'').length === 11;
+  const allSet  = state.serviceId && state.barberId && state.date && state.time && nameOk && phoneOk && cpfOk;
+  $('btnConfirm').disabled = !allSet;
+}
+
+// Máscara de CPF
+const cpfEl = $('inp_cpf');
+if (cpfEl) {
+  cpfEl.addEventListener('input', function () {
+    let v = this.value.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 9)      v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+    else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
+    else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, '$1.$2');
+    this.value = v;
+    updateConfirmBtn();
+  });
+}
+
+['inp_name', 'inp_phone'].forEach(id => {
+  const el = $(id);
+  if (el) el.addEventListener('input', updateConfirmBtn);
+});
+
+// Loading state no submit — evita double-submit e dá feedback imediato
+document.getElementById('bookForm').addEventListener('submit', function () {
+  const btn = $('btnConfirm');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Agendando...';
+});
+
+// ── Restaurar estado se form foi resubmetido com erros ───
+(function initFromPostData() {
+  const svcId = inpService.value;
+  if (svcId) {
+    const card = document.querySelector(`[data-step="service"][data-id="${svcId}"]`);
+    if (card) card.click();
+  }
+  const bId = inpBarber.value;
+  if (bId) {
+    const card = document.querySelector(`[data-step="barber"][data-id="${bId}"]`);
+    if (card) { card.click(); }
+  }
+  const dVal = inpDate.value;
+  if (dVal && datePicker) {
+    datePicker.value = dVal;
+    datePicker.dispatchEvent(new Event('change'));
+  }
+})();
+</script>
+{% endblock %}

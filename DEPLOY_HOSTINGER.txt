@@ -1,0 +1,546 @@
+================================================================================
+  GUIA COMPLETO — HOSPEDAR O PROSPECT BARBERHUB EM SUBDOMINIO DA HOSTINGER
+================================================================================
+  Nivel de dificuldade: Iniciante
+  Tempo estimado: 30 a 60 minutos
+  Plano necessario: Hostinger Premium, Business ou superior (suporte a Python)
+================================================================================
+
+
+------------------------------------------------------------------------
+VISAO GERAL DO QUE VAMOS FAZER
+------------------------------------------------------------------------
+
+  1. Preparar os arquivos do projeto no seu computador
+  2. Criar o subdominio no painel da Hostinger (ex: agendamentos.seusite.com.br)
+  3. Conectar via SSH no servidor
+  4. Enviar os arquivos para o servidor
+  5. Instalar as dependencias Python no servidor
+  6. Configurar as variaveis de ambiente (senha secreta, banco etc.)
+  7. Inicializar o banco de dados
+  8. Configurar o aplicativo Python no hPanel
+  9. Testar no navegador
+
+------------------------------------------------------------------------
+PARTE 1 — PREPARAR OS ARQUIVOS NO SEU COMPUTADOR
+------------------------------------------------------------------------
+
+Antes de enviar qualquer coisa para o servidor, voce precisa preparar
+o projeto local.
+
+  PASSO 1.1 — Verificar o arquivo requirements.txt
+  -------------------------------------------------
+  O arquivo requirements.txt lista todas as bibliotecas que o projeto usa.
+  Abra o terminal na pasta do projeto e rode:
+
+      venv\Scripts\activate
+      pip freeze > requirements.txt
+
+  O arquivo deve conter algo assim:
+      Flask==3.1.3
+      Flask-Login==0.6.3
+      Flask-SQLAlchemy==3.1.1
+      Flask-WTF==1.3.0
+      gunicorn==21.2.0      <-- IMPORTANTE: adicione manualmente se nao aparecer
+      python-dotenv==1.2.2
+      ... (outras bibliotecas)
+
+  ATENCAO: O "gunicorn" precisa estar no requirements.txt.
+  Se nao aparecer, abra o arquivo requirements.txt e adicione na lista:
+      gunicorn==21.2.0
+
+  PASSO 1.2 — Criar o arquivo .env de producao
+  --------------------------------------------
+  Na pasta raiz do projeto (onde esta o run.py), crie um arquivo chamado
+  ".env" com o seguinte conteudo:
+
+      FLASK_ENV=production
+      SECRET_KEY=troque-por-uma-chave-longa-e-aleatoria-aqui-ex-abc123xyz789
+      DATABASE_URL=sqlite:///database.db
+
+  DICA para SECRET_KEY: Use uma sequencia de letras e numeros aleatorios,
+  com pelo menos 32 caracteres. Exemplo:
+      SECRET_KEY=9f2k3m8x1q7w4e5r6t0y9u8i7o6p5a4s3d2f1g
+
+  NUNCA compartilhe esse arquivo .env com ninguem.
+
+  PASSO 1.3 — Criar o arquivo passenger_wsgi.py
+  -----------------------------------------------
+  Na pasta raiz do projeto (onde esta o run.py), crie um arquivo chamado
+  "passenger_wsgi.py" com o seguinte conteudo:
+
+  ---- inicio do arquivo passenger_wsgi.py ----
+
+  import sys
+  import os
+
+  # Garante que o Python encontra os modulos do projeto
+  sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+  # Carrega as variaveis do arquivo .env
+  from dotenv import load_dotenv
+  load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
+
+  # Importa o app Flask como "application" (nome exigido pelo servidor)
+  from run import app as application
+
+  ---- fim do arquivo passenger_wsgi.py ----
+
+  PASSO 1.4 — Verificar o .gitignore (opcional mas recomendado)
+  --------------------------------------------------------------
+  Se voce usa Git, certifique-se de que o .gitignore contem:
+      .env
+      database.db
+      venv/
+      __pycache__/
+      *.pyc
+      logs/
+
+  PASSO 1.5 — Lista dos arquivos que devem estar no projeto
+  ---------------------------------------------------------
+  Confirme que a pasta do projeto tem estes itens:
+
+      barber_prospect/
+      |-- app/                  (pasta com todo o codigo)
+      |-- run.py                (arquivo principal)
+      |-- requirements.txt      (lista de dependencias)
+      |-- passenger_wsgi.py     (arquivo que voce acabou de criar)
+      |-- .env                  (variaveis de ambiente)
+      |-- README.md             (opcional)
+
+  NAO envie para o servidor:
+      - A pasta "venv/"
+      - O arquivo "database.db" local (sera criado no servidor)
+
+
+------------------------------------------------------------------------
+PARTE 2 — CRIAR O SUBDOMINIO NO HPANEL DA HOSTINGER
+------------------------------------------------------------------------
+
+  PASSO 2.1 — Acessar o hPanel
+  ----------------------------
+  1. Acesse https://hpanel.hostinger.com.br
+  2. Faca login com seu e-mail e senha da Hostinger
+  3. Clique em "Gerenciar" ao lado do seu plano de hospedagem
+
+  PASSO 2.2 — Criar o subdominio
+  ------------------------------
+  1. No menu lateral esquerdo, clique em "Dominios"
+  2. Clique em "Subdominios"
+  3. Clique no botao "+ Criar subdominio"
+  4. No campo "Subdominio", digite o nome que voce quer.
+     Exemplos:
+       - agendamentos    (resultado: agendamentos.seusite.com.br)
+       - barbearia       (resultado: barbearia.seusite.com.br)
+       - app             (resultado: app.seusite.com.br)
+  5. Selecione o dominio principal na lista (ex: theprospect.com.br)
+  6. Em "Raiz do documento", o sistema vai sugerir automaticamente algo
+     como "/subdominios/agendamentos". Deixe assim ou ajuste se preferir.
+     ANOTE esse caminho — voce vai precisar dele depois.
+  7. Clique em "Criar"
+
+  Aguarde alguns minutos. O subdominio pode levar ate 24 horas para
+  propagar na internet, mas geralmente funciona em minutos.
+
+
+------------------------------------------------------------------------
+PARTE 3 — ATIVAR O ACESSO SSH
+------------------------------------------------------------------------
+
+  SSH e uma forma de conectar ao servidor pelo terminal, como se voce
+  estivesse digitando comandos diretamente no computador da Hostinger.
+
+  PASSO 3.1 — Ativar SSH no hPanel
+  ---------------------------------
+  1. No hPanel, va em "Avancado" > "Acesso SSH"
+     (Ou procure por "SSH" na barra de busca do hPanel)
+  2. Clique em "Ativar" se ainda nao estiver ativo
+  3. Anote ou copie:
+       - Host SSH: geralmente "seusite.com.br" ou um IP
+       - Porta: geralmente 22
+       - Usuario: o usuario da sua conta Hostinger
+       - Senha: a senha da hospedagem (ou gere uma chave SSH)
+
+  PASSO 3.2 — Instalar um cliente SSH no seu computador (Windows)
+  ---------------------------------------------------------------
+  O Windows 10/11 ja vem com SSH. Abra o "Prompt de Comando" ou
+  "PowerShell" e teste:
+
+      ssh usuario@seusite.com.br
+
+  Se preferir uma interface grafica, use o programa gratuito:
+      Bitvise SSH Client: https://www.bitvise.com/ssh-client-download
+      PuTTY: https://www.putty.org/
+
+  PASSO 3.3 — Conectar ao servidor
+  ---------------------------------
+  No terminal (ou no Bitvise), conecte:
+
+      ssh u123456789@seusite.com.br
+
+  Substitua "u123456789" pelo seu usuario real da Hostinger.
+  Quando pedir a senha, digite a senha da sua hospedagem.
+  (A senha nao aparece enquanto voce digita — isso e normal.)
+
+  Voce vai ver algo como:
+      [u123456789@server ~]$
+
+  Isso significa que voce esta conectado.
+
+
+------------------------------------------------------------------------
+PARTE 4 — ENVIAR OS ARQUIVOS PARA O SERVIDOR
+------------------------------------------------------------------------
+
+  Voce tem duas opcoes para enviar os arquivos:
+
+  OPCAO A — Usando Git (recomendado se voce usa Git)
+  --------------------------------------------------
+  No servidor (ja conectado via SSH), navegue ate a pasta do subdominio:
+
+      cd ~/public_html
+      ls
+
+  Va ate a pasta do subdominio que voce criou:
+      cd ~/subdominios/agendamentos
+
+  Clone seu repositorio Git (se o projeto estiver no GitHub):
+      git clone https://github.com/seu-usuario/seu-repositorio.git .
+
+  O ponto final "." clona direto na pasta atual.
+
+  OPCAO B — Usando SFTP (arrastar e soltar arquivos)
+  --------------------------------------------------
+  1. Abra o Bitvise SSH Client (ou FileZilla com SFTP)
+  2. Conecte com os mesmos dados do SSH
+  3. Na tela do Bitvise, clique em "New SFTP window"
+  4. No lado esquerdo voce ve seu computador, no lado direito o servidor
+  5. Navegue no servidor ate: /subdominios/agendamentos (ou o caminho anotado)
+  6. Selecione todos os arquivos do projeto (exceto a pasta venv e database.db)
+  7. Arraste para o lado direito (servidor)
+  8. Aguarde o envio
+
+  OPCAO C — Usando o Gerenciador de Arquivos do hPanel
+  ----------------------------------------------------
+  1. No hPanel, va em "Arquivos" > "Gerenciador de Arquivos"
+  2. Navegue ate a pasta do subdominio (/subdominios/agendamentos)
+  3. Clique em "Upload" e selecione um arquivo .zip do projeto
+     (compacte a pasta do projeto, sem a pasta venv)
+  4. Apos o upload, clique com o botao direito no .zip e escolha "Extrair"
+
+  DICA: A opcao C e mais facil para iniciantes que nao usam Git.
+  Para criar o .zip: selecione todos os arquivos do projeto (nao a pasta venv),
+  clique com botao direito > Enviar para > Pasta compactada.
+
+
+------------------------------------------------------------------------
+PARTE 5 — CONFIGURAR O AMBIENTE PYTHON NO SERVIDOR
+------------------------------------------------------------------------
+
+  Conecte ao servidor via SSH e siga os passos abaixo.
+
+  PASSO 5.1 — Navegar ate a pasta do projeto
+  ------------------------------------------
+      cd ~/subdominios/agendamentos
+      ls
+
+  Voce deve ver os arquivos do projeto: run.py, app/, requirements.txt, etc.
+
+  PASSO 5.2 — Criar o ambiente virtual Python
+  --------------------------------------------
+      python3 -m venv venv
+
+  Se der erro, tente:
+      python3.11 -m venv venv
+
+  PASSO 5.3 — Ativar o ambiente virtual
+  -------------------------------------
+      source venv/bin/activate
+
+  Voce vai ver "(venv)" aparecer no inicio da linha, assim:
+      (venv) [u123456789@server agendamentos]$
+
+  PASSO 5.4 — Instalar as dependencias
+  -------------------------------------
+      pip install -r requirements.txt
+
+  Isso pode demorar alguns minutos. Aguarde terminar.
+  Ao final deve aparecer: "Successfully installed ..."
+
+  PASSO 5.5 — Instalar Gunicorn (se nao estiver no requirements.txt)
+  ------------------------------------------------------------------
+      pip install gunicorn
+
+
+------------------------------------------------------------------------
+PARTE 6 — CONFIGURAR AS VARIAVEIS DE AMBIENTE NO SERVIDOR
+------------------------------------------------------------------------
+
+  PASSO 6.1 — Criar o arquivo .env no servidor
+  ---------------------------------------------
+  Ainda no terminal SSH, dentro da pasta do projeto:
+
+      nano .env
+
+  (O "nano" e um editor de texto simples dentro do terminal)
+
+  Cole o seguinte conteudo (substitua os valores):
+
+      FLASK_ENV=production
+      SECRET_KEY=coloque-aqui-uma-chave-secreta-longa-e-aleatoria
+      DATABASE_URL=sqlite:///database.db
+
+  Para sair do nano:
+      - Pressione Ctrl + X
+      - Pressione Y (para confirmar salvar)
+      - Pressione Enter
+
+  PASSO 6.2 — Verificar se o arquivo foi criado
+  ----------------------------------------------
+      cat .env
+
+  Voce deve ver as linhas que digitou.
+
+  DICA DE SEGURANCA: Nunca coloque a SECRET_KEY igual a mostrada nesse
+  guia. Crie uma propria com letras e numeros aleatorios.
+
+
+------------------------------------------------------------------------
+PARTE 7 — INICIALIZAR O BANCO DE DADOS NO SERVIDOR
+------------------------------------------------------------------------
+
+  Ainda no terminal SSH, com o ambiente virtual ativado:
+
+  PASSO 7.1 — Ir para a pasta do projeto
+  ---------------------------------------
+      cd ~/subdominios/agendamentos
+      source venv/bin/activate
+
+  PASSO 7.2 — Criar as tabelas do banco de dados
+  -----------------------------------------------
+      flask --app run init-db
+
+  Deve aparecer: "Banco de dados inicializado."
+
+  PASSO 7.3 — Criar o usuario administrador e dados iniciais
+  -----------------------------------------------------------
+      flask --app run seed
+
+  Deve aparecer:
+      Seed aplicado com sucesso!
+      Admin:  admin / admin123
+      Barber: joao  / barber123
+
+  IMPORTANTE: Depois de fazer login pela primeira vez, va em
+  "Configuracoes" ou "Usuarios" e troque a senha do admin!
+
+  PASSO 7.4 — Verificar se o banco foi criado
+  --------------------------------------------
+      ls -la database.db
+
+  Voce deve ver o arquivo database.db na pasta.
+
+
+------------------------------------------------------------------------
+PARTE 8 — CONFIGURAR O APLICATIVO PYTHON NO HPANEL
+------------------------------------------------------------------------
+
+  PASSO 8.1 — Abrir a configuracao de Python no hPanel
+  ------------------------------------------------------
+  1. Va ao hPanel: https://hpanel.hostinger.com.br
+  2. Clique em "Gerenciar" no seu plano
+  3. No menu lateral, procure por "Python" ou va em:
+     "Avancado" > "Aplicativos Python"
+  4. Clique em "Criar aplicativo" ou "Configurar aplicativo Python"
+
+  PASSO 8.2 — Preencher as configuracoes
+  ----------------------------------------
+  Preencha os campos assim:
+
+    Versao do Python:    3.11 (ou a versao mais recente disponivel)
+    Modo do aplicativo:  Producao
+    Pasta raiz:          /subdominios/agendamentos
+                         (a pasta onde esta o seu projeto)
+    URL do aplicativo:   /
+                         (barra simples = raiz do subdominio)
+    Arquivo de inicializacao: passenger_wsgi.py
+    Ponto de entrada:    application
+
+  Clique em "Salvar" ou "Criar".
+
+  PASSO 8.3 — Reiniciar o aplicativo
+  -----------------------------------
+  1. Ainda na pagina do aplicativo Python
+  2. Clique em "Reiniciar" ou "Restart App"
+  3. Aguarde alguns segundos
+
+  PASSO 8.4 — Verificar os logs em caso de erro
+  ----------------------------------------------
+  Se o site nao abrir, verifique os logs:
+  1. Na mesma pagina, procure por "Logs" ou "Error Log"
+  2. Leia as mensagens de erro para entender o problema
+  3. Os erros mais comuns estao na PARTE 9 desse guia
+
+
+------------------------------------------------------------------------
+PARTE 9 — TESTAR O SITE
+------------------------------------------------------------------------
+
+  PASSO 9.1 — Acessar o subdominio no navegador
+  -----------------------------------------------
+  Abra o navegador e acesse:
+      https://agendamentos.seusite.com.br
+  (use o seu subdominio real)
+
+  O que deve aparecer:
+      - Painel de login se voce acessar a raiz (/)
+      - Ou a pagina de agendamento publico em /appointments/book
+
+  PASSO 9.2 — Fazer login como administrador
+  ------------------------------------------
+  1. Acesse: https://agendamentos.seusite.com.br/auth/login
+  2. Usuario: admin
+  3. Senha:   admin123
+  4. Troque a senha imediatamente em "Perfil" ou "Configuracoes"
+
+  PASSO 9.3 — Testar o agendamento publico
+  -----------------------------------------
+  1. Acesse: https://agendamentos.seusite.com.br/appointments/book
+  2. Siga os 5 passos do wizard
+  3. Confirme o agendamento
+  4. Verifique no painel admin se o agendamento aparece
+
+
+------------------------------------------------------------------------
+PARTE 10 — PROBLEMAS COMUNS E SOLUCOES
+------------------------------------------------------------------------
+
+  PROBLEMA: "Error 500 — Internal Server Error"
+  -----------------------------------------------
+  Causa: Geralmente e um erro no codigo ou nas configuracoes.
+  Solucao:
+    1. Verifique os logs no hPanel (Aplicativos Python > Logs)
+    2. Certifique-se de que o arquivo .env esta correto
+    3. Certifique-se de que o banco de dados foi inicializado (Parte 7)
+    4. Verifique se o requirements.txt foi instalado completamente
+
+  PROBLEMA: "Error 400 — Bad Request" ao tentar agendar
+  -------------------------------------------------------
+  Causa: CSRF token invalido.
+  Solucao:
+    1. Certifique-se de que SECRET_KEY no .env e uma string longa
+    2. Acesse o site por HTTPS (nao HTTP)
+    3. Tente limpar o cache do navegador e tentar novamente
+
+  PROBLEMA: Site abre mas sem estilo visual (sem CSS)
+  ----------------------------------------------------
+  Causa: Os arquivos estaticos (CSS, JS, imagens) nao estao carregando.
+  Solucao:
+    1. Verifique se a pasta app/static/ foi enviada corretamente
+    2. No hPanel, configure o servidor para servir arquivos estaticos
+       ou adicione um arquivo .htaccess (veja abaixo)
+
+  PROBLEMA: "ModuleNotFoundError"
+  ---------------------------------
+  Causa: As dependencias nao foram instaladas corretamente.
+  Solucao:
+    1. Via SSH, acesse a pasta e rode novamente:
+         source venv/bin/activate
+         pip install -r requirements.txt
+
+  PROBLEMA: "OperationalError: no such table"
+  --------------------------------------------
+  Causa: O banco de dados nao foi inicializado.
+  Solucao:
+    1. Via SSH:
+         cd ~/subdominios/agendamentos
+         source venv/bin/activate
+         flask --app run init-db
+         flask --app run seed
+
+  PROBLEMA: Pagina em branco / aplicativo nao inicia
+  ---------------------------------------------------
+  Causa: O arquivo passenger_wsgi.py pode estar incorreto.
+  Solucao:
+    1. Verifique se o arquivo passenger_wsgi.py existe na pasta raiz
+    2. Verifique o conteudo (veja Passo 1.3 desse guia)
+    3. Reinicie o aplicativo no hPanel
+
+
+------------------------------------------------------------------------
+ARQUIVO .htaccess (se necessario)
+------------------------------------------------------------------------
+
+  Se o site abrir mas sem CSS/imagens, crie um arquivo chamado
+  ".htaccess" na pasta raiz do projeto com o conteudo abaixo:
+
+  ---- inicio do .htaccess ----
+
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^(.*)$ /passenger_wsgi.py/$1 [QSA,L]
+
+  ---- fim do .htaccess ----
+
+  OBS: Na maioria dos casos com Hostinger isso NAO e necessario.
+
+
+------------------------------------------------------------------------
+RESUMO DOS COMANDOS SSH (referencia rapida)
+------------------------------------------------------------------------
+
+  Conectar ao servidor:
+      ssh usuario@seusite.com.br
+
+  Ir para a pasta do projeto:
+      cd ~/subdominios/agendamentos
+
+  Ativar o ambiente virtual:
+      source venv/bin/activate
+
+  Instalar dependencias:
+      pip install -r requirements.txt
+
+  Inicializar banco de dados:
+      flask --app run init-db
+
+  Popular dados iniciais:
+      flask --app run seed
+
+  Ver logs de erro em tempo real:
+      tail -f logs/barberhub.log
+
+  Atualizar o projeto (se usar Git):
+      git pull origin main
+      pip install -r requirements.txt
+      (depois reinicie o app no hPanel)
+
+
+------------------------------------------------------------------------
+CHECKLIST FINAL — Antes de divulgar o link do site
+------------------------------------------------------------------------
+
+  [ ] O site abre no navegador sem erros
+  [ ] O login de admin funciona (admin / admin123)
+  [ ] A senha do admin foi TROCADA
+  [ ] O agendamento publico funciona (/appointments/book)
+  [ ] Os servicos e barbeiros foram cadastrados no painel admin
+  [ ] O arquivo .env esta com uma SECRET_KEY unica e segura
+  [ ] O HTTPS esta ativo (cadeado verde no navegador)
+  [ ] Testou o agendamento do inicio ao fim como um cliente real
+
+------------------------------------------------------------------------
+SUPORTE DA HOSTINGER
+------------------------------------------------------------------------
+
+  Se travar em algum passo, o suporte da Hostinger atende 24h:
+    - Chat: https://www.hostinger.com.br/suporte
+    - Central de ajuda: https://support.hostinger.com.br/
+
+  Diga que voce tem um "aplicativo Python Flask" e precisa de ajuda
+  com a "configuracao do Python App no hPanel".
+
+================================================================================
+  FIM DO GUIA
+  Projeto: Prospect BarberHub — Sistema de Agendamento para Barbearia
+================================================================================

@@ -1,0 +1,312 @@
+{% extends "base_public.html" %}
+{% block title %}Meus Agendamentos{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9 col-xl-8">
+
+    <!-- ── Título ──────────────────────────────────────── -->
+    <div class="text-center mb-4">
+      <h3 class="fw-bold mb-1" style="font-family:'Playfair Display',serif">Meus Agendamentos</h3>
+      <p class="text-muted small">Consulte e gerencie seus horários pelo CPF.</p>
+    </div>
+
+    <!-- ── Formulário de busca ─────────────────────────── -->
+    <form method="POST" action="{{ url_for('client.lookup') }}" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="lookup-card mb-4">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold small">
+              <i class="bi bi-person-vcard me-1 text-accent"></i>CPF <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="cpf" id="cpfSearch"
+                   class="form-control bg-dark border-secondary text-light"
+                   value="{{ cpf_input }}"
+                   placeholder="000.000.000-00"
+                   maxlength="14"
+                   style="font-family:'JetBrains Mono',monospace"
+                   autocomplete="off">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold small">
+              <i class="bi bi-calendar me-1 text-muted"></i>De
+            </label>
+            <input type="date" name="date_from"
+                   class="form-control bg-dark border-secondary text-light"
+                   value="{{ date_from }}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold small">
+              <i class="bi bi-calendar me-1 text-muted"></i>Até
+            </label>
+            <input type="date" name="date_to"
+                   class="form-control bg-dark border-secondary text-light"
+                   value="{{ date_to }}">
+          </div>
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-gold w-100">
+              <i class="bi bi-search me-1"></i>Buscar
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <!-- ── Resultados ──────────────────────────────────── -->
+    {% if customer %}
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <div class="lookup-avatar">{{ customer.initials }}</div>
+      <div>
+        <div class="fw-bold" style="font-family:'Playfair Display',serif;font-size:1.05rem">{{ customer.name }}</div>
+        <div class="text-muted small" style="font-family:'JetBrains Mono',monospace">{{ customer.cpf }}</div>
+      </div>
+      <div class="ms-auto">
+        <span class="badge-athos" style="border-color:var(--c-white-border);color:var(--c-white)">
+          {{ appointments | length }} agendamento(s)
+        </span>
+      </div>
+    </div>
+
+    {% if appointments %}
+    {% for a in appointments %}
+    {% set is_past = a.scheduled_date < today %}
+    {% set can_act = a.status in ('pending', 'confirmed') and not is_past %}
+
+    <div class="appt-card mb-3 {% if is_past %}appt-past{% endif %}">
+      <div class="appt-card-header">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <span class="badge-athos badge-{{ a.status }}">{{ a.status_label }}</span>
+          <span class="appt-datetime">
+            <i class="bi bi-calendar3 me-1"></i>{{ a.scheduled_date.strftime('%d/%m/%Y') }}
+            &nbsp;·&nbsp;
+            <i class="bi bi-clock me-1"></i>{{ a.scheduled_time.strftime('%H:%M') }}
+            {% if a.end_time_str %}– {{ a.end_time_str }}{% endif %}
+          </span>
+        </div>
+        {% if a.barber and a.barber.whatsapp_link %}
+        <a href="{{ a.barber.whatsapp_link }}" target="_blank" rel="noopener"
+           class="appt-wa-link" title="WhatsApp do barbeiro">
+          <i class="bi bi-whatsapp"></i> {{ a.barber.name }}
+        </a>
+        {% endif %}
+      </div>
+
+      <div class="appt-card-body">
+        <div class="appt-details">
+          <div>
+            <span class="appt-label">Barbeiro</span>
+            <span class="appt-value">{{ a.barber.name if a.barber else '—' }}</span>
+          </div>
+          <div>
+            <span class="appt-label">Serviço</span>
+            <span class="appt-value">{{ a.service.name if a.service else '—' }}</span>
+          </div>
+          <div>
+            <span class="appt-label">Valor</span>
+            <span class="appt-value" style="font-family:'JetBrains Mono',monospace">
+              {{ a.service.price_formatted if a.service else '—' }}
+            </span>
+          </div>
+        </div>
+
+        {% if can_act %}
+        <div class="appt-actions">
+          {% if a.status == 'pending' %}
+          <form method="POST" action="{{ url_for('client.confirm_appointment', appt_id=a.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="cpf" value="{{ customer.cpf }}">
+            <button type="submit" class="btn-appt btn-appt-confirm">
+              <i class="bi bi-check-circle me-1"></i>Confirmar
+            </button>
+          </form>
+          {% endif %}
+
+          <a href="{{ url_for('client.reschedule_appointment', appt_id=a.id) }}"
+             class="btn-appt btn-appt-reschedule">
+            <i class="bi bi-calendar-event me-1"></i>Remarcar
+          </a>
+
+          <button type="button" class="btn-appt btn-appt-cancel"
+                  data-bs-toggle="modal" data-bs-target="#cancelModal{{ a.id }}">
+            <i class="bi bi-x-circle me-1"></i>Cancelar
+          </button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Modal cancelar -->
+    {% if can_act %}
+    <div class="modal fade" id="cancelModal{{ a.id }}" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:var(--c-bg-2);border:1px solid rgba(204,31,31,.35)">
+          <div class="modal-header" style="border-color:rgba(204,31,31,.2)">
+            <h6 class="modal-title text-danger fw-bold">
+              <i class="bi bi-exclamation-triangle me-2"></i>Cancelar agendamento?
+            </h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body text-muted small">
+            <p class="mb-1">
+              <strong class="text-white">{{ a.scheduled_date.strftime('%d/%m/%Y') }}</strong>
+              às <strong class="text-white">{{ a.scheduled_time.strftime('%H:%M') }}</strong>
+              com <strong class="text-white">{{ a.barber.name if a.barber else '—' }}</strong>
+            </p>
+            <p class="mb-0">Esta ação não pode ser desfeita.</p>
+          </div>
+          <div class="modal-footer" style="border-color:rgba(204,31,31,.2)">
+            <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Voltar</button>
+            <form method="POST" action="{{ url_for('client.cancel_appointment', appt_id=a.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="cpf" value="{{ customer.cpf }}">
+              <button type="submit" class="btn btn-danger btn-sm">
+                <i class="bi bi-x-circle me-1"></i>Cancelar agendamento
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% endfor %}
+
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon"><i class="bi bi-calendar-x"></i></div>
+      <h6 class="fw-bold mb-1">Nenhum agendamento encontrado</h6>
+      <p class="text-muted small mb-3">Tente ajustar o filtro de datas ou realize um novo agendamento.</p>
+      <a href="{{ url_for('appointments.book') }}" class="btn btn-gold btn-sm">
+        <i class="bi bi-calendar-plus me-1"></i>Agendar agora
+      </a>
+    </div>
+    {% endif %}
+
+    {% endif %}
+
+    <!-- Link para agendar -->
+    <div class="text-center mt-4 pt-2" style="border-top:1px solid var(--c-border)">
+      <a href="{{ url_for('appointments.book') }}" class="text-muted small">
+        <i class="bi bi-calendar-plus me-1"></i>Fazer novo agendamento
+      </a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Lookup card ──────────────────────────────────────── */
+.lookup-card {
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 24px;
+}
+
+/* ── Customer avatar ──────────────────────────────────── */
+.lookup-avatar {
+  width: 52px; height: 52px; border-radius: 4px;
+  background: #1a1a1a; border: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-weight: 700; font-size: 1.2rem; color: var(--c-text-2);
+  flex-shrink: 0;
+}
+
+/* ── Appointment card ─────────────────────────────────── */
+.appt-card {
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-border);
+  border-left: 3px solid rgba(204,31,31,.5);
+  border-radius: 4px;
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.appt-card:not(.appt-past):hover {
+  border-left-color: var(--c-red);
+}
+.appt-card.appt-past {
+  opacity: .65;
+  border-left-color: var(--c-border);
+}
+
+.appt-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
+  padding: 12px 16px;
+  background: #0d0d0d;
+  border-bottom: 1px solid var(--c-border);
+}
+.appt-datetime {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .8rem; color: var(--c-text-2);
+}
+.appt-wa-link {
+  display: flex; align-items: center; gap: 5px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .72rem; font-weight: 600;
+  color: #25D366; text-decoration: none;
+}
+.appt-wa-link:hover { opacity: .8; }
+
+.appt-card-body {
+  padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.appt-details {
+  display: flex; gap: 24px; flex-wrap: wrap;
+}
+.appt-label {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .65rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--c-text-muted); display: block; margin-bottom: 2px;
+}
+.appt-value {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .82rem; color: var(--c-text);
+}
+
+/* ── Action buttons ───────────────────────────────────── */
+.appt-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn-appt {
+  padding: 5px 12px; border-radius: 2px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .72rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; cursor: pointer;
+  border: 1px solid; background: transparent;
+  transition: background .12s, color .12s;
+  text-decoration: none; display: inline-flex; align-items: center;
+}
+.btn-appt-confirm {
+  border-color: rgba(25,135,84,.5); color: #198754;
+}
+.btn-appt-confirm:hover { background: rgba(25,135,84,.12); }
+.btn-appt-reschedule {
+  border-color: rgba(232,232,224,.25); color: var(--c-text-2);
+}
+.btn-appt-reschedule:hover { background: rgba(255,255,255,.05); }
+.btn-appt-cancel {
+  border-color: rgba(204,31,31,.4); color: var(--c-red);
+}
+.btn-appt-cancel:hover { background: rgba(204,31,31,.08); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const cpfSearch = document.getElementById("cpfSearch");
+if (cpfSearch) {
+  cpfSearch.addEventListener("input", function () {
+    let v = this.value.replace(/\D/g, "").slice(0, 11);
+    if (v.length > 9)      v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+    else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+    else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+    this.value = v;
+  });
+}
+</script>
+{% endblock %}

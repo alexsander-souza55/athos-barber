@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}{{ customer.name }} — Athos Barbearia{% endblock %}
+{% block page_title %}Perfil do Cliente{% endblock %}
+
+{% block content %}
+
+<!-- ── Breadcrumb ─────────────────────────────────────── -->
+<nav class="mb-3 mt-2" aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('customers.index') }}" class="text-accent">Clientes</a>
+    </li>
+    <li class="breadcrumb-item active text-muted">{{ customer.name }}</li>
+  </ol>
+</nav>
+
+<!-- ── Hero Card ──────────────────────────────────────── -->
+<div class="hero-card mb-4">
+  <div class="hero-body">
+
+    <!-- Avatar de iniciais -->
+    <div class="hero-avatar flex-shrink-0">{{ customer.initials }}</div>
+
+    <!-- Informações -->
+    <div class="hero-info">
+      <h4 class="fw-bold mb-1">{{ customer.name }}</h4>
+
+      <div class="d-flex flex-wrap gap-3 text-muted small mt-1">
+        {% if customer.phone %}
+        <span><i class="bi bi-telephone me-1 text-accent"></i>{{ customer.phone }}</span>
+        {% endif %}
+        {% if customer.email %}
+        <span><i class="bi bi-envelope me-1 text-accent"></i>{{ customer.email }}</span>
+        {% endif %}
+        {% if customer.age %}
+        <span><i class="bi bi-cake2 me-1"></i>{{ customer.age }} anos</span>
+        {% endif %}
+        <span>
+          <i class="bi bi-calendar-plus me-1"></i>
+          Cliente desde {{ customer.created_at.strftime('%d/%m/%Y') }}
+        </span>
+        {% if stats.last_appt %}
+        <span>
+          <i class="bi bi-calendar-check me-1 text-accent"></i>
+          Última visita: {{ stats.last_appt.scheduled_date.strftime('%d/%m/%Y') }}
+        </span>
+        {% endif %}
+      </div>
+
+      {% if customer.notes %}
+      <p class="text-muted small fst-italic mt-2 mb-0">
+        <i class="bi bi-sticky me-1"></i>{{ customer.notes }}
+      </p>
+      {% endif %}
+    </div>
+
+    <!-- Ações -->
+    <div class="hero-actions">
+      <a href="{{ url_for('customers.edit', customer_id=customer.id) }}"
+         class="btn btn-gold btn-sm">
+        <i class="bi bi-pencil me-1"></i>Editar
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Stats ──────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-gold-soft"><i class="bi bi-calendar-check text-accent fs-5"></i></div>
+      <div class="stat-value">{{ stats.total }}</div>
+      <div class="stat-label">Total de agend.</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-success-soft"><i class="bi bi-check-circle text-success fs-5"></i></div>
+      <div class="stat-value">{{ stats.completed }}</div>
+      <div class="stat-label">Visitas concluídas</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-info-soft"><i class="bi bi-hourglass-split text-info fs-5"></i></div>
+      <div class="stat-value">{{ stats.pending }}</div>
+      <div class="stat-label">Agend. em aberto</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-gold-soft"><i class="bi bi-cash-coin text-accent fs-5"></i></div>
+      <div class="stat-value small-value">R$ {{ "%.2f"|format(stats.revenue)|replace(".", ",") }}</div>
+      <div class="stat-label">Total gasto</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Histórico ──────────────────────────────────────── -->
+<div class="card card-dark">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="fw-bold mb-0">
+      <i class="bi bi-clock-history text-accent me-2"></i>Histórico de agendamentos
+    </h6>
+    <span class="badge-athos" style="border-color:var(--c-white-border);color:var(--c-white)">{{ stats.total }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Data / Hora</th>
+          <th>Barbeiro</th>
+          <th>Serviço</th>
+          <th class="text-end">Valor</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in recent %}
+        <tr>
+          <td class="text-accent fw-semibold small">{{ a.scheduled_datetime_str }}</td>
+          <td>{{ a.barber.name if a.barber else '—' }}</td>
+          <td class="text-muted small">{{ a.service.name if a.service else '—' }}</td>
+          <td class="text-end small">
+            {% if a.service %}
+              R$ {{ "%.2f"|format(a.service.price|float)|replace(".", ",") }}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <span class="badge-athos badge-{{ a.status }}">{{ a.status_label }}</span>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">
+            <i class="bi bi-inbox d-block fs-3 mb-1 opacity-25"></i>
+            Nenhum agendamento registrado.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.hero-card {
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.hero-body {
+  display: flex; align-items: flex-start; gap: 24px;
+  padding: 24px 28px;
+  flex-wrap: wrap;
+}
+.hero-avatar {
+  width: 90px; height: 90px; border-radius: 4px;
+  background: #1a1a1a; border: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem; font-weight: 700; color: var(--c-text-2);
+  flex-shrink: 0;
+}
+.hero-info { flex: 1; min-width: 200px; }
+.hero-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.small-value { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem !important; }
+
+@media (max-width: 576px) {
+  .hero-body { flex-direction: column; align-items: center; text-align: center; }
+  .hero-actions { align-items: center; }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{% set is_edit = action == 'edit' %}
+{% block title %}{% if is_edit %}Editar — {{ barber.name }}{% else %}Novo Barbeiro{% endif %}{% endblock %}
+{% block page_title %}{% if is_edit %}Editar Barbeiro{% else %}Novo Barbeiro{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-xl-9 col-lg-10">
+
+    <!-- Breadcrumb -->
+    <nav class="mb-3" aria-label="breadcrumb">
+      <ol class="breadcrumb breadcrumb-dark small">
+        <li class="breadcrumb-item"><a href="{{ url_for('barbers.index') }}" class="text-accent">Barbeiros</a></li>
+        <li class="breadcrumb-item active">
+          {% if is_edit %}{{ barber.name }}{% else %}Novo{% endif %}
+        </li>
+      </ol>
+    </nav>
+
+    <form method="POST" enctype="multipart/form-data" novalidate id="barberForm">
+      {{ form.hidden_tag() }}
+
+      <div class="row g-4">
+
+        <!-- ── Coluna esquerda: Foto ──────────────────── -->
+        <div class="col-md-4 col-lg-3">
+          <div class="card card-dark sticky-top" style="top: 80px;">
+            <div class="card-body p-3 text-center">
+              <p class="text-muted small text-uppercase fw-semibold mb-3" style="letter-spacing:1px;font-size:.65rem">
+                <i class="bi bi-camera me-1 text-accent"></i>Foto
+              </p>
+
+              <!-- Preview atual / nova -->
+              <div id="photoWrap" class="mb-3">
+                {% if is_edit and barber.photo_url %}
+                  <img id="photoPreview" src="{{ barber.photo_url }}"
+                       class="barber-photo-lg" alt="{{ barber.name }}" />
+                {% else %}
+                  <div id="photoAvatar" class="barber-avatar-lg mx-auto">
+                    {% if is_edit %}{{ barber.initials }}{% else %}<i class="bi bi-person"></i>{% endif %}
+                  </div>
+                  <img id="photoPreview" src="" class="barber-photo-lg d-none" alt="Preview" />
+                {% endif %}
+              </div>
+
+              <!-- Input de arquivo -->
+              <label class="btn btn-outline-gold btn-sm w-100 mb-2" for="photoInput">
+                <i class="bi bi-upload me-1"></i>
+                {% if is_edit and barber.photo_url %}Trocar foto{% else %}Escolher foto{% endif %}
+              </label>
+              {{ form.photo(id="photoInput", class="d-none", accept="image/*") }}
+              {% for e in form.photo.errors %}
+                <div class="text-danger small mt-1">{{ e }}</div>
+              {% endfor %}
+              <p class="text-muted" style="font-size:.65rem">PNG, JPG, WebP · Máx. 5 MB</p>
+
+              <!-- Remover foto (só no edit) -->
+              {% if is_edit and barber.photo_url %}
+              <div class="form-check form-check-sm mt-1">
+                {{ form.remove_photo(class="form-check-input") }}
+                <label class="form-check-label text-danger small" for="{{ form.remove_photo.id }}">
+                  Remover foto atual
+                </label>
+              </div>
+              {% endif %}
+
+              {% if is_edit %}
+              <hr class="border-secondary">
+              <!-- Status (edit only) -->
+              <div class="form-check form-switch d-flex align-items-center justify-content-center gap-2">
+                {{ form.is_active(class="form-check-input", role="switch", id="isActiveSwitch") }}
+                <label class="form-check-label small fw-semibold" for="isActiveSwitch">Barbeiro ativo</label>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Coluna direita: Campos ─────────────────── -->
+        <div class="col-md-8 col-lg-9">
+
+          {% if not is_edit %}
+          <!-- ═ Seção: Conta de acesso ═══════════════════ -->
+          <div class="card card-dark mb-4">
+            <div class="card-header">
+              <h6 class="fw-bold mb-0">
+                <i class="bi bi-key text-accent me-2"></i>Conta de acesso ao sistema
+              </h6>
+            </div>
+            <div class="card-body p-4">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small">{{ form.username.label.text }} <span class="text-danger">*</span></label>
+                  {{ form.username(class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.username.errors else ""),
+                                  placeholder="login do sistema", autocomplete="off") }}
+                  {% for e in form.username.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small">{{ form.email.label.text }} <span class="text-danger">*</span></label>
+                  {{ form.email(class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.email.errors else ""),
+                                placeholder="email@dominio.com") }}
+                  {% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small">{{ form.password.label.text }} <span class="text-danger">*</span></label>
+                  {{ form.password(class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.password.errors else ""),
+                                   placeholder="Mínimo 6 caracteres") }}
+                  {% for e in form.password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small">{{ form.confirm_password.label.text }} <span class="text-danger">*</span></label>
+                  {{ form.confirm_password(class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.confirm_password.errors else ""),
+                                           placeholder="Repita a senha") }}
+                  {% for e in form.confirm_password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- ═ Seção: Perfil do barbeiro ════════════════ -->
+          <div class="card card-dark mb-4">
+            <div class="card-header">
+              <h6 class="fw-bold mb-0">
+                <i class="bi bi-person-badge text-accent me-2"></i>Perfil do barbeiro
+              </h6>
+            </div>
+            <div class="card-body p-4">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label fw-semibold small">{{ form.name.label.text }} <span class="text-danger">*</span></label>
+                  {{ form.name(class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.name.errors else ""),
+                               placeholder="Nome que aparece para os clientes", id="nameInput") }}
+                  {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small">{{ form.phone.label.text }}</label>
+                  {{ form.phone(class="form-control bg-dark border-secondary text-light",
+                                placeholder="(00) 00000-0000") }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small">{{ form.whatsapp.label.text }}</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary" style="color:#25D366">
+                      <i class="bi bi-whatsapp"></i>
+                    </span>
+                    {{ form.whatsapp(class="form-control bg-dark border-secondary text-light",
+                                    placeholder="5567999998888",
+                                    id="whatsappInput",
+                                    style="font-family:'JetBrains Mono',monospace") }}
+                  </div>
+                  <div class="form-text">Somente dígitos com código do país (ex: 5567999998888).</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small">{{ form.specialty.label.text }}</label>
+                  {{ form.specialty(class="form-control bg-dark border-secondary text-light",
+                                    placeholder="Ex: Degradê, Navalhado, Barba...") }}
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-semibold small">{{ form.bio.label.text }}</label>
+                  {{ form.bio(class="form-control bg-dark border-secondary text-light", rows=3,
+                              placeholder="Uma breve apresentação que será exibida para os clientes...") }}
+                  <div class="form-text">Máx. 500 caracteres.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═ Seção: Horários ══════════════════════════ -->
+          <div class="card card-dark mb-4">
+            <div class="card-header">
+              <h6 class="fw-bold mb-0">
+                <i class="bi bi-clock text-accent me-2"></i>Horário de atendimento
+              </h6>
+            </div>
+            <div class="card-body p-4">
+              <div class="row g-3 align-items-start">
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold small">{{ form.work_start_time.label.text }}</label>
+                  {{ form.work_start_time(
+                      class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.work_start_time.errors else ""),
+                      type="time", placeholder="08:00",
+                      id="startTime"
+                  ) }}
+                  {% for e in form.work_start_time.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="col-auto d-flex align-items-end pb-1">
+                  <span class="text-muted fs-5">—</span>
+                </div>
+
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold small">{{ form.work_end_time.label.text }}</label>
+                  {{ form.work_end_time(
+                      class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.work_end_time.errors else ""),
+                      type="time", placeholder="18:00",
+                      id="endTime"
+                  ) }}
+                  {% for e in form.work_end_time.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                </div>
+
+                <!-- Preview do horário -->
+                <div class="col-12 mt-1">
+                  <div id="hoursPreview" class="hours-preview" style="display:none">
+                    <i class="bi bi-clock text-accent me-1"></i>
+                    Atendimento: <strong id="hoursPreviewText"></strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═ Ações ════════════════════════════════════ -->
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-gold px-4 fw-bold">
+              <i class="bi bi-check-circle me-2"></i>
+              {% if is_edit %}Salvar alterações{% else %}Cadastrar barbeiro{% endif %}
+            </button>
+            {% if is_edit %}
+            <a href="{{ url_for('barbers.detail', barber_id=barber.id) }}"
+               class="btn btn-outline-secondary">Cancelar</a>
+            {% else %}
+            <a href="{{ url_for('barbers.index') }}"
+               class="btn btn-outline-secondary">Cancelar</a>
+            {% endif %}
+          </div>
+
+        </div><!-- /col -->
+      </div><!-- /row -->
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.barber-photo-lg {
+  width: 110px; height: 110px; border-radius: 4px;
+  object-fit: cover; border: 1px solid var(--c-border);
+}
+.barber-avatar-lg {
+  width: 110px; height: 110px; border-radius: 4px;
+  background: #1a1a1a; border: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 2.2rem; font-weight: 700; color: var(--c-text-2);
+}
+.breadcrumb-dark .breadcrumb-item.active { color: var(--c-text-muted); }
+.breadcrumb-dark .breadcrumb-item + .breadcrumb-item::before { color: var(--c-border); }
+.hours-preview {
+  background: rgba(204,31,31,.07);
+  border: 1px solid rgba(204,31,31,.2);
+  border-radius: 2px; padding: 7px 14px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .82rem; color: var(--c-text-2);
+  display: inline-block;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Preview de foto ──────────────────────────────────────
+const photoInput   = document.getElementById("photoInput");
+const photoPreview = document.getElementById("photoPreview");
+const photoAvatar  = document.getElementById("photoAvatar");
+
+if (photoInput) {
+  photoInput.addEventListener("change", function () {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      photoPreview.src = e.target.result;
+      photoPreview.classList.remove("d-none");
+      photoPreview.classList.add("barber-photo-lg");
+      if (photoAvatar) photoAvatar.style.display = "none";
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Avatar de iniciais dinâmico ──────────────────────────
+const nameInput  = document.getElementById("nameInput");
+const avatarEl   = document.getElementById("photoAvatar");
+
+function updateInitials() {
+  if (!avatarEl || avatarEl.style.display === "none") return;
+  const parts = (nameInput.value || "").trim().split(/\s+/);
+  let initials = "";
+  if (parts.length >= 2) {
+    initials = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  } else if (parts[0]) {
+    initials = parts[0].slice(0, 2).toUpperCase();
+  }
+  if (initials) avatarEl.textContent = initials;
+}
+if (nameInput) nameInput.addEventListener("input", updateInitials);
+
+// ── Preview de horário ───────────────────────────────────
+const startTime    = document.getElementById("startTime");
+const endTime      = document.getElementById("endTime");
+const hoursPreview = document.getElementById("hoursPreview");
+const hoursText    = document.getElementById("hoursPreviewText");
+
+function updateHoursPreview() {
+  const s = startTime.value, e = endTime.value;
+  if (s && e) {
+    hoursPreview.style.display = "inline-block";
+    hoursText.textContent = s + " – " + e;
+    // Valida fim > início
+    if (e <= s) {
+      endTime.classList.add("is-invalid");
+    } else {
+      endTime.classList.remove("is-invalid");
+    }
+  } else {
+    hoursPreview.style.display = "none";
+  }
+}
+if (startTime) startTime.addEventListener("change", updateHoursPreview);
+if (endTime)   endTime.addEventListener("change", updateHoursPreview);
+updateHoursPreview(); // aplica ao carregar
+</script>
+{% endblock %}

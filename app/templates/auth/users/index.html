@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Usuários — Athos Barbearia{% endblock %}
+{% block page_title %}Gestão de Usuários{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 mt-2">
+  <div>
+    <h5 class="fw-bold mb-0">Usuários do sistema</h5>
+    <p class="text-muted small mb-0">{{ users|length }} usuário(s) cadastrado(s)</p>
+  </div>
+  <a href="{{ url_for('auth.new_user') }}" class="btn btn-gold">
+    <i class="bi bi-person-plus me-1"></i>Novo usuário
+  </a>
+</div>
+
+<!-- Tabela -->
+<div class="card card-dark">
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th style="width:40px"></th>
+          <th>Usuário</th>
+          <th>E-mail</th>
+          <th>Perfil</th>
+          <th class="text-center">Status</th>
+          <th class="text-center">Logins</th>
+          <th>Último acesso</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr class="{% if not u.is_active %}opacity-50{% endif %}">
+          <!-- Avatar -->
+          <td>
+            <div class="avatar-sm {% if u.is_admin %}avatar-admin{% else %}avatar-barber{% endif %}">
+              {{ u.display_name[0]|upper }}
+            </div>
+          </td>
+
+          <!-- Usuário -->
+          <td>
+            <div class="fw-semibold">{{ u.username }}</div>
+            <div class="text-muted small">{{ u.display_name if u.is_barber else 'Administrador' }}</div>
+          </td>
+
+          <!-- E-mail -->
+          <td class="text-muted small">{{ u.email }}</td>
+
+          <!-- Role badge -->
+          <td>
+            <span class="badge bg-{{ u.role_badge_color }} px-2 py-1">
+              <i class="bi bi-{% if u.is_admin %}shield{% else %}scissors{% endif %} me-1"></i>
+              {{ u.role_label }}
+            </span>
+          </td>
+
+          <!-- Status -->
+          <td class="text-center">
+            {% if u.is_locked %}
+              <span class="badge bg-warning text-dark">
+                <i class="bi bi-lock me-1"></i>Bloqueado
+              </span>
+            {% elif u.is_active %}
+              <span class="badge bg-success">Ativo</span>
+            {% else %}
+              <span class="badge bg-secondary">Inativo</span>
+            {% endif %}
+          </td>
+
+          <!-- Logins -->
+          <td class="text-center">
+            <span class="text-accent fw-semibold">{{ u.login_count or 0 }}</span>
+          </td>
+
+          <!-- Último acesso -->
+          <td class="text-muted small">
+            {% if u.last_login %}
+              {{ u.last_login.strftime('%d/%m/%Y %H:%M') }}
+            {% else %}
+              <span class="fst-italic">Nunca</span>
+            {% endif %}
+          </td>
+
+          <!-- Ações -->
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <!-- Editar -->
+              <a href="{{ url_for('auth.edit_user', user_id=u.id) }}"
+                 class="btn btn-sm btn-outline-light" title="Editar">
+                <i class="bi bi-pencil"></i>
+              </a>
+
+              <!-- Reset senha -->
+              <a href="{{ url_for('auth.reset_password', user_id=u.id) }}"
+                 class="btn btn-sm btn-outline-warning" title="Redefinir senha">
+                <i class="bi bi-key"></i>
+              </a>
+
+              <!-- Desbloquear (só se bloqueado) -->
+              {% if u.is_locked %}
+              <form method="POST" action="{{ url_for('auth.unlock_user', user_id=u.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-info" title="Desbloquear">
+                  <i class="bi bi-unlock"></i>
+                </button>
+              </form>
+              {% endif %}
+
+              <!-- Ativar/Desativar -->
+              {% if u.id != current_user.id %}
+              <form method="POST" action="{{ url_for('auth.toggle_user', user_id=u.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit"
+                        class="btn btn-sm {% if u.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
+                        title="{% if u.is_active %}Desativar{% else %}Ativar{% endif %}">
+                  <i class="bi bi-{% if u.is_active %}pause{% else %}play{% endif %}"></i>
+                </button>
+              </form>
+
+              <!-- Excluir -->
+              <form method="POST" action="{{ url_for('auth.delete_user', user_id=u.id) }}"
+                    onsubmit="return confirm('Excluir o usuário {{ u.username }}? Esta ação não pode ser desfeita.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+              {% endif %}
+
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-5">
+            Nenhum usuário encontrado.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Legenda -->
+<div class="d-flex gap-4 mt-3 flex-wrap">
+  <span class="text-muted small"><span class="badge bg-danger me-1">Admin</span> Acesso total ao sistema</span>
+  <span class="text-muted small"><span class="badge bg-info me-1">Barbeiro</span> Acesso aos próprios agendamentos</span>
+  <span class="text-muted small"><span class="badge bg-warning text-dark me-1"><i class="bi bi-lock"></i> Bloqueado</span> Muitas tentativas de login</span>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-sm {
+  width: 34px; height: 34px; border-radius: 4px;
+  background: #1a1a1a;
+  border: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: .85rem; font-weight: 700;
+  color: var(--c-text-2);
+}
+.avatar-admin  { border-color: rgba(204,31,31,.35); }
+.avatar-barber { border-color: rgba(14,165,233,.25); }
+</style>
+{% endblock %}

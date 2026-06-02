@@ -1,0 +1,717 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Athos Barbearia{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── KPI Cards ─────────────────────────────────────────────────── */
+.kpi-card {
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  transition: border-color var(--t-base);
+}
+.kpi-card:hover { border-color: #3e3e3e; }
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px; height: 100%;
+  background: linear-gradient(180deg, var(--c-red) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity var(--t-base);
+}
+.kpi-card:hover::before,
+.kpi-card.kpi-accent::before { opacity: 1; }
+
+.kpi-icon {
+  width: 40px; height: 40px;
+  border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.05rem;
+}
+.kpi-date-badge {
+  font-size: .6rem;
+  background: rgba(255,255,255,.04);
+  color: var(--c-text-muted);
+  border-radius: var(--r-xs);
+  padding: 2px 7px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  font-family: 'Josefin Sans', sans-serif;
+}
+.kpi-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: var(--c-text);
+  line-height: 1;
+  margin-bottom: 4px;
+  letter-spacing: -.5px;
+}
+.kpi-money { font-size: 1.35rem; letter-spacing: -.5px; }
+.kpi-label {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .68rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--c-text-muted);
+}
+.kpi-sub { font-size: .72rem; }
+
+/* ── Chart cards ───────────────────────────────────────────────── */
+.chart-card {
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  height: 100%;
+  overflow: hidden;
+}
+.chart-header {
+  padding: 15px 22px;
+  border-bottom: 1px solid var(--c-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  gap: 10px;
+  background: #0d0d0d;
+}
+.chart-header h6 {
+  margin: 0;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .72rem; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--c-text-2);
+}
+.chart-body { padding: 20px; }
+
+/* ── Barber ranking ────────────────────────────────────────────── */
+.barber-mini-avatar {
+  width: 28px; height: 28px;
+  background: #1a1a1a;
+  border: 1px solid var(--c-border);
+  border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: .6rem; font-weight: 700; color: var(--c-text-2);
+  flex-shrink: 0;
+}
+.rank-pill {
+  width: 20px; height: 20px;
+  border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .6rem; font-weight: 700;
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+.rank-1 { background: rgba(204,31,31,.14); color: var(--c-text); }
+.rank-2 { background: rgba(209,213,219,.08); color: #9ca3af; }
+.rank-3 { background: rgba(180,140,100,.08); color: #b08060; }
+.rank-4, .rank-5 { background: rgba(75,85,99,.1); color: #4b5563; }
+
+/* ── Service dot ───────────────────────────────────────────────── */
+.svc-dot {
+  width: 8px; height: 8px;
+  border-radius: 1px;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+/* ── Upcoming empty state ──────────────────────────────────────── */
+.upcoming-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 52px 20px;
+  text-align: center;
+}
+.upcoming-empty-icon {
+  width: 60px; height: 60px;
+  background: rgba(255,255,255,.02);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  color: rgba(255,255,255,.1);
+  margin-bottom: 14px;
+  border: 1px solid var(--c-border);
+}
+
+/* ── Greeting ──────────────────────────────────────────────────── */
+.dash-greeting {
+  border-left: 3px solid var(--c-white);
+  padding-left: 14px;
+}
+.dash-greeting h5 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem; color: var(--c-text);
+}
+
+/* ── Quick actions ─────────────────────────────────────────────── */
+.quick-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  color: var(--c-text-2);
+  text-decoration: none;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .78rem; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+.quick-action-btn:hover {
+  background: var(--c-red-dim);
+  border-color: var(--c-red-border);
+  color: var(--c-text);
+}
+.quick-action-btn i { font-size: 1rem; flex-shrink: 0; }
+.quick-action-primary {
+  background: var(--c-white) !important;
+  border-color: var(--c-white) !important;
+  color: #0a0a0a !important;
+  font-weight: 700;
+}
+.quick-action-primary:hover {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #0a0a0a !important;
+}
+
+.mw-0 { min-width: 0; }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<!-- ── Greeting ─────────────────────────────────────────────────── -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div class="dash-greeting">
+    <h5 class="fw-bold mb-0">
+      {% if current_user.is_admin %}Visão geral do negócio{% else %}Minha performance{% endif %}
+    </h5>
+    <p class="mb-0" style="font-family:'Josefin Sans',sans-serif;font-size:.7rem;letter-spacing:.06em;color:var(--c-text-muted)">{{ today_label }}</p>
+  </div>
+  {% if current_user.is_admin %}
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('appointments.book') }}" class="btn btn-sm btn-outline-gold" target="_blank">
+      <i class="bi bi-link-45deg me-1"></i>Link público
+    </a>
+    <a href="{{ url_for('appointments.new') }}" class="btn btn-gold btn-sm fw-semibold">
+      <i class="bi bi-plus-circle me-1"></i>Novo agendamento
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ══ ROW 1 — KPI Cards ══════════════════════════════════════════ -->
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex align-items-start justify-content-between mb-3">
+        <div class="kpi-icon bg-gold-soft">
+          <i class="bi bi-calendar-day text-accent"></i>
+        </div>
+        <span class="kpi-date-badge">hoje</span>
+      </div>
+      <div class="kpi-value">{{ stats.today_total }}</div>
+      <div class="kpi-label mb-2">Atendimentos do dia</div>
+      <div class="kpi-sub d-flex flex-wrap gap-2">
+        <span class="text-success"><i class="bi bi-check-circle me-1"></i>{{ stats.today_completed }}</span>
+        <span class="text-warning"><i class="bi bi-hourglass me-1"></i>{{ stats.today_pending }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-xl-3">
+    <div class="kpi-card kpi-accent">
+      <div class="d-flex align-items-start justify-content-between mb-3">
+        <div class="kpi-icon bg-gold-soft">
+          <i class="bi bi-cash-coin text-accent"></i>
+        </div>
+        <span class="kpi-date-badge">hoje</span>
+      </div>
+      <div class="kpi-value kpi-money text-accent">{{ stats.today_revenue_fmt }}</div>
+      <div class="kpi-label mb-2">Faturamento do dia</div>
+      <div class="kpi-sub" style="color:var(--c-text-muted)">
+        Ticket médio <strong class="text-accent">{{ stats.avg_ticket_fmt }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex align-items-start justify-content-between mb-3">
+        <div class="kpi-icon bg-success-soft">
+          <i class="bi bi-graph-up-arrow text-success"></i>
+        </div>
+        <span class="kpi-date-badge">mês</span>
+      </div>
+      <div class="kpi-value kpi-money">{{ stats.month_revenue_fmt }}</div>
+      <div class="kpi-label mb-2">Faturamento mensal</div>
+      <div class="kpi-sub" style="color:var(--c-text-muted)">{{ month_label }}</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-xl-3">
+    {% if current_user.is_admin %}
+    <div class="kpi-card">
+      <div class="d-flex align-items-start justify-content-between mb-3">
+        <div class="kpi-icon bg-info-soft">
+          <i class="bi bi-people text-info"></i>
+        </div>
+        <span class="kpi-date-badge">total</span>
+      </div>
+      <div class="kpi-value">{{ stats.total_customers }}</div>
+      <div class="kpi-label mb-2">Clientes cadastrados</div>
+      <div class="kpi-sub" style="color:var(--c-text-muted)">
+        <i class="bi bi-scissors me-1 text-accent"></i>{{ stats.active_barbers }} barbeiro(s) ativo(s)
+      </div>
+    </div>
+    {% else %}
+    <div class="kpi-card">
+      <div class="d-flex align-items-start justify-content-between mb-3">
+        <div class="kpi-icon bg-info-soft">
+          <i class="bi bi-patch-check text-info"></i>
+        </div>
+        <span class="kpi-date-badge">mês</span>
+      </div>
+      <div class="kpi-value">
+        {{ stats.completion_rate }}<span style="font-size:1rem;font-weight:500">%</span>
+      </div>
+      <div class="kpi-label mb-2">Taxa de conclusão</div>
+      <div class="kpi-sub">
+        <div class="progress mt-1" style="height:3px">
+          <div class="progress-bar" style="width:{{ stats.completion_rate }}%;background:var(--c-white)"></div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- ══ ROW 2 — Gráfico semanal + Ações rápidas ══════════════════ -->
+<div class="row g-3 mb-4">
+
+  <div class="col-12 col-xl-8">
+    <div class="chart-card">
+      <div class="chart-header">
+        <h6><i class="bi bi-graph-up me-2" style="color:var(--c-red)"></i>Faturamento semanal</h6>
+        <span class="badge" style="background:var(--c-red-dim);color:var(--c-text-2);font-size:.6rem;letter-spacing:.1em">
+          Últimos 7 dias
+        </span>
+      </div>
+      <div class="chart-body">
+        <canvas id="weeklyChart" height="108"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-4">
+    <div class="chart-card">
+      <div class="chart-header">
+        <h6><i class="bi bi-lightning me-2" style="color:var(--c-red)"></i>Ações rápidas</h6>
+      </div>
+      <div class="chart-body d-flex flex-column gap-2">
+
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('appointments.new') }}" class="quick-action-btn quick-action-primary">
+          <i class="bi bi-plus-circle"></i>Novo agendamento
+        </a>
+        <a href="{{ url_for('customers.new') }}" class="quick-action-btn">
+          <i class="bi bi-person-plus"></i>Cadastrar cliente
+        </a>
+        <a href="{{ url_for('services.index') }}" class="quick-action-btn">
+          <i class="bi bi-scissors"></i>Gerenciar serviços
+        </a>
+        <a href="{{ url_for('reports.index') }}" class="quick-action-btn">
+          <i class="bi bi-file-earmark-bar-graph"></i>Exportar relatório
+        </a>
+        {% else %}
+        <a href="{{ url_for('appointments.index') }}" class="quick-action-btn quick-action-primary">
+          <i class="bi bi-calendar-check"></i>Ver minha agenda
+        </a>
+        <a href="{{ url_for('auth.profile') }}" class="quick-action-btn">
+          <i class="bi bi-person-circle"></i>Meu perfil
+        </a>
+        {% endif %}
+
+        <div class="mt-auto pt-3" style="border-top:1px solid var(--c-border)">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span style="font-family:'Josefin Sans',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c-text-muted)">Conclusão — mês</span>
+            <span class="fw-bold small text-accent" style="font-family:'JetBrains Mono',monospace">{{ stats.completion_rate }}%</span>
+          </div>
+          <div class="progress" style="height:4px">
+            <div class="progress-bar"
+                 style="width:{{ stats.completion_rate }}%;background:var(--c-white)"></div>
+          </div>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:.67rem;color:var(--c-text-muted);margin-top:4px">
+            Atendimentos concluídos sobre o total encerrado
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ ROW 3 — Barbeiros + Serviços ══════════════════════════════ -->
+<div class="row g-3 mb-4">
+
+  {% if current_user.is_admin %}
+  <div class="col-12 col-xl-6">
+    <div class="chart-card">
+      <div class="chart-header">
+        <h6><i class="bi bi-trophy me-2" style="color:var(--c-red)"></i>Barbeiros — {{ month_label }}</h6>
+        <a href="{{ url_for('barbers.index') }}" class="btn btn-sm btn-outline-gold">Ver todos</a>
+      </div>
+      <div class="chart-body">
+        {% if top_barbers %}
+        <canvas id="barbersChart"
+                height="{{ 55 if top_barbers|length <= 2 else (75 if top_barbers|length == 3 else 105) }}">
+        </canvas>
+        <div class="mt-4">
+          {% set max_cnt = top_barbers[0].cnt %}
+          {% for row in top_barbers %}
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="rank-pill rank-{{ loop.index }}">{{ loop.index }}</span>
+            <div class="barber-mini-avatar">{{ row.barber.initials }}</div>
+            <div class="flex-grow-1 mw-0">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="small fw-semibold text-truncate" style="font-family:'Josefin Sans',sans-serif;color:var(--c-text)">{{ row.barber.name }}</span>
+                <span class="small ms-2 flex-shrink-0"
+                      style="font-family:'JetBrains Mono',monospace;color:{% if loop.index == 1 %}var(--c-text){% else %}#9ca3af{% endif %}">
+                  {{ row.cnt }} atend.
+                </span>
+              </div>
+              <div class="progress mt-1" style="height:3px">
+                <div class="progress-bar"
+                     style="width:{{ (row.cnt / max_cnt * 100)|round|int }}%;
+                            background:{% if loop.index == 1 %}var(--c-white){% elif loop.index == 2 %}#9ca3af{% else %}#4b5563{% endif %}">
+                </div>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:.67rem;color:var(--c-text-muted);margin-top:3px">{{ row.revenue_fmt }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="upcoming-empty">
+          <div class="upcoming-empty-icon"><i class="bi bi-trophy"></i></div>
+          <p class="text-muted small mb-0">Nenhum atendimento concluído este mês.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Serviços -->
+  <div class="col-12 {% if current_user.is_admin %}col-xl-6{% endif %}">
+    <div class="chart-card">
+      <div class="chart-header">
+        <h6><i class="bi bi-scissors me-2" style="color:var(--c-red)"></i>Serviços mais vendidos</h6>
+        <span class="badge" style="background:var(--c-red-dim);color:var(--c-text-2);font-size:.6rem;letter-spacing:.1em">
+          {{ month_label }}
+        </span>
+      </div>
+      <div class="chart-body">
+        {% if top_services %}
+        <div class="row align-items-center g-3">
+          <div class="col-5 col-md-4">
+            <div style="position:relative">
+              <canvas id="servicesChart"></canvas>
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none">
+                <div class="fw-bold text-accent" style="font-family:'JetBrains Mono',monospace;font-size:.9rem;line-height:1">
+                  {{ top_services | sum(attribute='cnt') }}
+                </div>
+                <div style="font-family:'Josefin Sans',sans-serif;font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--c-text-muted)">atend.</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-7 col-md-8">
+            {% set palette = ['#cc1f1f','#38bdf8','#4ade80','#a855f7','#f87171','#fb923c'] %}
+            {% for row in top_services %}
+            <div class="d-flex align-items-start gap-2 mb-2">
+              <span class="svc-dot" style="background:{{ palette[loop.index0] }}"></span>
+              <div class="mw-0 flex-grow-1">
+                <div class="small fw-semibold text-truncate" style="font-family:'Josefin Sans',sans-serif;color:var(--c-text)">{{ row.service.name }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--c-text-muted)">
+                  {{ row.cnt }}× · {{ row.revenue_fmt }}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% else %}
+        <div class="upcoming-empty">
+          <div class="upcoming-empty-icon"><i class="bi bi-scissors"></i></div>
+          <p class="text-muted small mb-0">Nenhum serviço concluído este mês.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ ROW 4 — Próximos agendamentos ══════════════════════════════ -->
+<div class="row">
+  <div class="col-12">
+    <div class="chart-card">
+      <div class="chart-header">
+        <h6><i class="bi bi-clock-history me-2" style="color:var(--c-red)"></i>Próximos agendamentos</h6>
+        <a href="{{ url_for('appointments.index') }}" class="btn btn-sm btn-outline-gold">
+          Agenda completa <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+
+      {% if upcoming %}
+      <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0 align-middle">
+          <thead>
+            <tr>
+              <th style="width:120px">Data / Hora</th>
+              <th>Cliente</th>
+              {% if current_user.is_admin %}
+              <th class="d-none d-md-table-cell">Barbeiro</th>
+              {% endif %}
+              <th class="d-none d-lg-table-cell">Serviço</th>
+              <th style="width:120px">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in upcoming %}
+            <tr>
+              <td>
+                <div class="fw-bold text-accent" style="font-family:'JetBrains Mono',monospace;font-size:.9rem">
+                  {{ a.scheduled_time.strftime('%H:%M') }}
+                </div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--c-text-muted)">
+                  {{ a.scheduled_date.strftime('%d/%m/%Y') }}
+                </div>
+              </td>
+              <td>
+                <div class="fw-semibold small" style="font-family:'Josefin Sans',sans-serif;color:var(--c-text)">{{ a.customer.name if a.customer else '—' }}</div>
+                {% if a.customer and a.customer.phone %}
+                <div class="d-none d-md-block" style="font-family:'Josefin Sans',sans-serif;font-size:.7rem;color:var(--c-text-muted)">
+                  <i class="bi bi-telephone me-1"></i>{{ a.customer.phone }}
+                </div>
+                {% endif %}
+              </td>
+              {% if current_user.is_admin %}
+              <td class="d-none d-md-table-cell" style="font-family:'Josefin Sans',sans-serif;font-size:.82rem;color:var(--c-text-muted)">
+                {{ a.barber.name if a.barber else '—' }}
+              </td>
+              {% endif %}
+              <td class="d-none d-lg-table-cell">
+                <div class="small" style="font-family:'Josefin Sans',sans-serif;color:var(--c-text)">{{ a.service.name if a.service else '—' }}</div>
+                {% if a.service %}
+                <div class="text-accent" style="font-family:'JetBrains Mono',monospace;font-size:.7rem">{{ a.service.price_formatted }}</div>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge-athos badge-{{ a.status }}" style="font-size:.6rem">
+                  {{ a.status_label }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% else %}
+      <div class="upcoming-empty">
+        <div class="upcoming-empty-icon"><i class="bi bi-calendar-check"></i></div>
+        <p class="text-muted small mb-3">
+          Nenhum agendamento pendente ou confirmado a partir de hoje.
+        </p>
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('appointments.new') }}" class="btn btn-gold btn-sm">
+          <i class="bi bi-plus-circle me-1"></i>Criar agendamento
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+/* ── Chart.js defaults ───────────────────────────────────────── */
+const ACCENT     = '#cc1f1f';
+const PALETTE    = ['#cc1f1f','#38bdf8','#4ade80','#a855f7','#f87171','#fb923c'];
+const GRID_CLR   = 'rgba(255,255,255,0.04)';
+const TEXT_CLR   = '#555550';
+const TOOLTIP_BG = '#0f0f0f';
+
+Chart.defaults.color       = TEXT_CLR;
+Chart.defaults.font.family = "'Josefin Sans', sans-serif";
+Chart.defaults.font.size   = 11;
+
+/* ── 1. Faturamento semanal ─────────────────────────────────── */
+(function () {
+  const ctx  = document.getElementById('weeklyChart').getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 260);
+  grad.addColorStop(0, 'rgba(204,31,31,0.22)');
+  grad.addColorStop(1, 'rgba(204,31,31,0.00)');
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: {{ weekly.labels | tojson }},
+      datasets: [{
+        label: 'Faturamento (R$)',
+        data: {{ weekly.amounts | tojson }},
+        borderColor: ACCENT,
+        backgroundColor: grad,
+        borderWidth: 2,
+        pointBackgroundColor: ACCENT,
+        pointBorderColor: '#0a0a0a',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        fill: true,
+        tension: 0.42,
+      }]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: TOOLTIP_BG,
+          borderColor: 'rgba(204,31,31,.2)',
+          borderWidth: 1,
+          padding: 10,
+          callbacks: {
+            label: c => '  R$ ' + c.parsed.y.toLocaleString('pt-BR', {
+              minimumFractionDigits: 2, maximumFractionDigits: 2
+            })
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: GRID_CLR },
+          border: { dash: [4,4], color: 'transparent' },
+          ticks: {
+            color: TEXT_CLR,
+            callback: v => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:0})
+          }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: TEXT_CLR }
+        }
+      }
+    }
+  });
+})();
+
+{% if top_services %}
+/* ── 2. Serviços — doughnut ─────────────────────────────────── */
+(function () {
+  const ctx = document.getElementById('servicesChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: {{ top_services | map(attribute='service') | map(attribute='name') | list | tojson }},
+      datasets: [{
+        data: {{ top_services | map(attribute='cnt') | list | tojson }},
+        backgroundColor: PALETTE.slice(0, {{ top_services | length }}),
+        borderColor: '#0a0a0a',
+        borderWidth: 3,
+        hoverBorderWidth: 1,
+        hoverOffset: 4,
+      }]
+    },
+    options: {
+      cutout: '70%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: TOOLTIP_BG,
+          borderColor: 'rgba(255,255,255,.06)',
+          borderWidth: 1,
+          padding: 10,
+          callbacks: {
+            label: c => '  ' + c.label + ': ' + c.parsed + ' atend.'
+          }
+        }
+      }
+    }
+  });
+})();
+{% endif %}
+
+{% if current_user.is_admin and top_barbers %}
+/* ── 3. Barbeiros — horizontal bar ─────────────────────────── */
+(function () {
+  const ctx = document.getElementById('barbersChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: {{ top_barbers | map(attribute='barber') | map(attribute='name') | list | tojson }},
+      datasets: [{
+        label: 'Atendimentos',
+        data:   {{ top_barbers | map(attribute='cnt') | list | tojson }},
+        backgroundColor: PALETTE.slice(0, {{ top_barbers | length }}),
+        borderColor: 'transparent',
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: TOOLTIP_BG,
+          borderColor: 'rgba(255,255,255,.06)',
+          borderWidth: 1,
+          padding: 10,
+          callbacks: {
+            label: c => '  ' + c.parsed.x + ' atendimentos'
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          grid: { color: GRID_CLR },
+          ticks: { color: TEXT_CLR, precision: 0 }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: TEXT_CLR }
+        }
+      }
+    }
+  });
+})();
+{% endif %}
+</script>
+{% endblock %}

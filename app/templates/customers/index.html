@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Clientes — Athos Barbearia{% endblock %}
+{% block page_title %}Clientes{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ─────────────────────────────────────────────── -->
+<div class="page-header">
+  <div class="page-header-title">
+    <h5>Clientes</h5>
+    <div class="page-header-meta">
+      <span><i class="bi bi-people me-1 text-accent"></i>{{ summary.total }} cadastrados</span>
+      <span><i class="bi bi-person-plus me-1 text-success"></i>{{ summary.new_month }} este mês</span>
+    </div>
+  </div>
+  <div class="page-header-actions">
+    <a href="{{ url_for('customers.new') }}" class="btn btn-gold fw-semibold">
+      <i class="bi bi-person-plus me-2"></i>Novo cliente
+    </a>
+  </div>
+</div>
+
+<!-- ── Stats ────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-gold-soft"><i class="bi bi-people text-accent"></i></div>
+      <div class="stat-value">{{ summary.total }}</div>
+      <div class="stat-label">Total de clientes</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-success-soft"><i class="bi bi-person-plus text-success"></i></div>
+      <div class="stat-value">{{ summary.new_month }}</div>
+      <div class="stat-label">Novos este mês</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-info-soft"><i class="bi bi-person-check text-info"></i></div>
+      <div class="stat-value">{{ summary.attended }}</div>
+      <div class="stat-label">Já atendidos</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-purple-soft"><i class="bi bi-calendar-check text-purple"></i></div>
+      <div class="stat-value">{{ summary.total_visits }}</div>
+      <div class="stat-label">Visitas concluídas</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Filtros ─────────────────────────────────────────────────── -->
+<form method="GET">
+  <div class="filter-bar">
+    <div class="input-group" style="max-width:320px">
+      <span class="input-group-text"><i class="bi bi-search" style="font-size:.8rem"></i></span>
+      <input type="search" name="q"
+             class="form-control form-select-sm"
+             placeholder="Nome ou telefone…"
+             value="{{ q }}" />
+    </div>
+    <select name="sort" class="form-select form-select-sm" style="width:auto;min-width:170px"
+            onchange="this.form.submit()">
+      <option value="name"   {% if sort == 'name'   %}selected{% endif %}>Ordenar por nome</option>
+      <option value="recent" {% if sort == 'recent' %}selected{% endif %}>Mais recentes</option>
+      <option value="visits" {% if sort == 'visits' %}selected{% endif %}>Mais visitas</option>
+    </select>
+    <button type="submit" class="btn btn-sm btn-outline-gold">Buscar</button>
+    {% if q %}
+    <a href="{{ url_for('customers.index', sort=sort) }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-x me-1"></i>Limpar
+    </a>
+    {% endif %}
+  </div>
+</form>
+
+<!-- ── Tabela ─────────────────────────────────────────────────── -->
+{% if customers %}
+<div class="card card-dark">
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th class="d-none d-md-table-cell">Telefone</th>
+          <th class="text-center" style="width:90px">Visitas</th>
+          <th class="d-none d-md-table-cell" style="width:110px">Cadastro</th>
+          <th class="text-end" style="width:110px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in customers %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-3">
+              <div class="customer-avatar">{{ c.initials }}</div>
+              <div class="mw-0">
+                <div class="fw-semibold text-truncate" style="font-size:.88rem">{{ c.name }}</div>
+                <div class="d-md-none text-muted" style="font-size:.72rem">{{ c.phone or '—' }}</div>
+                {% if c.email %}
+                <div class="text-muted d-none d-lg-block" style="font-size:.7rem">
+                  <i class="bi bi-envelope me-1"></i>{{ c.email }}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td class="d-none d-md-table-cell text-muted small">
+            {% if c.phone %}
+            <i class="bi bi-telephone me-1 text-accent" style="opacity:.7"></i>{{ c.phone }}
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-center">
+            {% if c.total_visits > 0 %}
+            <span class="badge-athos" style="border-color:var(--c-white-border);color:var(--c-white)">
+              {{ c.total_visits }}
+            </span>
+            {% else %}
+            <span class="text-muted small">0</span>
+            {% endif %}
+          </td>
+          <td class="d-none d-md-table-cell text-muted small">
+            {{ c.created_at.strftime('%d/%m/%Y') }}
+          </td>
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              {% if c.phone %}
+              <a href="https://wa.me/{{ c.phone | wa_number }}" target="_blank" rel="noopener"
+                 class="btn btn-sm" style="color:#25D366;border:1px solid rgba(37,211,102,.3);background:rgba(37,211,102,.05)"
+                 title="WhatsApp">
+                <i class="bi bi-whatsapp"></i>
+              </a>
+              {% endif %}
+              <a href="{{ url_for('customers.detail', customer_id=c.id) }}"
+                 class="btn btn-sm btn-outline-gold" title="Ver detalhes">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{{ url_for('customers.edit', customer_id=c.id) }}"
+                 class="btn btn-sm btn-outline-light" title="Editar">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button type="button" class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal" data-bs-target="#delModal{{ c.id }}"
+                      title="Excluir">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modais de exclusão -->
+{% for c in customers %}
+{% set appt_count = c.total_appointments %}
+<div class="modal fade" id="delModal{{ c.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background:var(--c-bg-2);border:1px solid rgba(204,31,31,.35)">
+      <div class="modal-header" style="border-color:rgba(204,31,31,.2)">
+        <h6 class="modal-title text-danger fw-bold">
+          <i class="bi bi-exclamation-triangle me-2"></i>Confirmar exclusão
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">
+          Excluir o cliente <strong class="text-white">{{ c.name }}</strong>?
+        </p>
+        <ul class="text-muted small mb-0">
+          <li>Esta ação <strong class="text-danger">não pode ser desfeita</strong></li>
+          {% if appt_count > 0 %}
+          <li class="text-warning mt-1">
+            <i class="bi bi-exclamation-circle me-1"></i>
+            Possui {{ appt_count }} agendamento(s) — <strong>exclusão bloqueada</strong>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+      <div class="modal-footer" style="border-color:rgba(204,31,31,.2)">
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <form method="POST" action="{{ url_for('customers.delete', customer_id=c.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger btn-sm"
+                  {% if appt_count > 0 %}disabled{% endif %}>
+            <i class="bi bi-trash me-1"></i>Excluir
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="bi bi-people"></i></div>
+  <h6 class="fw-bold mb-1">
+    {% if q %}Nenhum cliente encontrado para "{{ q }}"
+    {% else %}Nenhum cliente cadastrado{% endif %}
+  </h6>
+  <p class="text-muted small mb-3">
+    {% if q %}Tente outro nome ou telefone.
+    {% else %}Os clientes aparecem aqui conforme os agendamentos são realizados.{% endif %}
+  </p>
+  {% if not q %}
+  <a href="{{ url_for('customers.new') }}" class="btn btn-gold btn-sm">
+    <i class="bi bi-plus-circle me-1"></i>Cadastrar cliente
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

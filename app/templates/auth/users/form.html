@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% set is_edit = action == 'edit' %}
+{% block title %}{% if is_edit %}Editar Usuário{% else %}Novo Usuário{% endif %}{% endblock %}
+{% block page_title %}{% if is_edit %}Editar Usuário{% else %}Novo Usuário{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card card-dark mt-3">
+      <div class="card-header">
+        <h6 class="fw-bold mb-0">
+          <i class="bi bi-person-{% if is_edit %}gear{% else %}plus{% endif %} text-accent me-2"></i>
+          {% if is_edit %}Editando — {{ user.username }}{% else %}Criar novo usuário{% endif %}
+        </h6>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+
+          <!-- Credenciais (só no cadastro) -->
+          {% if not is_edit %}
+          <p class="text-muted small text-uppercase mb-3" style="letter-spacing:1px; font-size:.7rem">
+            <i class="bi bi-key me-1 text-accent"></i>Credenciais de acesso
+          </p>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.username.label.text }} *</label>
+              {{ form.username(
+                  class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.username.errors else ""),
+                  placeholder="login do usuário",
+                  autocomplete="off"
+              ) }}
+              {% for e in form.username.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.email.label.text }} *</label>
+              {{ form.email(
+                  class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.email.errors else ""),
+                  placeholder="email@dominio.com"
+              ) }}
+              {% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.password.label.text }} *</label>
+              {{ form.password(
+                  class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.password.errors else ""),
+                  placeholder="Mínimo 6 caracteres"
+              ) }}
+              {% for e in form.password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.confirm_password.label.text }} *</label>
+              {{ form.confirm_password(
+                  class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.confirm_password.errors else ""),
+                  placeholder="Repita a senha"
+              ) }}
+              {% for e in form.confirm_password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+          <hr class="border-secondary">
+          {% else %}
+          <!-- Em edição: mostrar campos username e email -->
+          <p class="text-muted small text-uppercase mb-3" style="letter-spacing:1px; font-size:.7rem">
+            <i class="bi bi-person me-1 text-accent"></i>Dados da conta
+          </p>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.username.label.text }} *</label>
+              {{ form.username(
+                  class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.username.errors else "")
+              ) }}
+              {% for e in form.username.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.email.label.text }} *</label>
+              {{ form.email(
+                  class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.email.errors else "")
+              ) }}
+              {% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+          <hr class="border-secondary">
+          {% endif %}
+
+          <!-- Perfil e configurações -->
+          <p class="text-muted small text-uppercase mb-3" style="letter-spacing:1px; font-size:.7rem">
+            <i class="bi bi-shield me-1 text-accent"></i>Perfil de acesso
+          </p>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">{{ form.role.label.text }}</label>
+              {{ form.role(
+                  class="form-select bg-dark border-secondary text-light",
+                  id="roleSelect"
+              ) }}
+            </div>
+            {% if is_edit %}
+            <div class="col-md-6 d-flex align-items-end">
+              <div class="form-check form-switch ms-2">
+                {{ form.is_active(class="form-check-input", role="switch") }}
+                <label class="form-check-label" for="{{ form.is_active.id }}">Conta ativa</label>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Seção do perfil barbeiro (visível só quando role = barber) -->
+          {% if not is_edit %}
+          <div id="barberSection">
+            <hr class="border-secondary">
+            <p class="text-muted small text-uppercase mb-3" style="letter-spacing:1px; font-size:.7rem">
+              <i class="bi bi-scissors me-1 text-accent"></i>Perfil do barbeiro
+            </p>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label fw-semibold small">{{ form.name.label.text }} *</label>
+                {{ form.name(
+                    class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.name.errors else ""),
+                    placeholder="Nome que aparece para os clientes"
+                ) }}
+                {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">{{ form.phone.label.text }}</label>
+                {{ form.phone(
+                    class="form-control bg-dark border-secondary text-light",
+                    placeholder="(00) 00000-0000"
+                ) }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">{{ form.specialty.label.text }}</label>
+                {{ form.specialty(
+                    class="form-control bg-dark border-secondary text-light",
+                    placeholder="Ex: Degradê, Navalhado..."
+                ) }}
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Ações -->
+          <div class="d-flex gap-2 mt-4 pt-2 border-top border-secondary">
+            {{ form.submit(class="btn btn-gold px-4") }}
+            <a href="{{ url_for('auth.users') }}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if not is_edit %}
+<script>
+  const roleSelect    = document.getElementById("roleSelect");
+  const barberSection = document.getElementById("barberSection");
+
+  function toggleBarber() {
+    barberSection.style.display = roleSelect.value === "barber" ? "block" : "none";
+  }
+
+  roleSelect.addEventListener("change", toggleBarber);
+  toggleBarber(); // aplica ao carregar
+</script>
+{% endif %}
+{% endblock %}

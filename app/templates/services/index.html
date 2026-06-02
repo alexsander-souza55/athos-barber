@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}Serviços — Athos Barbearia{% endblock %}
+{% block page_title %}Serviços{% endblock %}
+
+{% block content %}
+
+<!-- ── Cabeçalho ──────────────────────────────────────── -->
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mt-2 mb-4">
+  <div>
+    <h5 class="fw-bold mb-1">Catálogo de Serviços</h5>
+    <div class="d-flex gap-3 text-muted small">
+      <span><i class="bi bi-stars me-1 text-accent"></i>{{ summary.total }} total</span>
+      <span><i class="bi bi-check-circle me-1 text-success"></i>{{ summary.active }} ativos</span>
+      <span><i class="bi bi-dash-circle me-1"></i>{{ summary.inactive }} inativos</span>
+    </div>
+  </div>
+  <a href="{{ url_for('services.new') }}" class="btn btn-gold">
+    <i class="bi bi-plus-circle me-2"></i>Novo serviço
+  </a>
+</div>
+
+<!-- ── Stats ──────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-gold-soft"><i class="bi bi-stars text-accent fs-5"></i></div>
+      <div class="stat-value">{{ summary.total }}</div>
+      <div class="stat-label">Total de serviços</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-success-soft"><i class="bi bi-check-circle text-success fs-5"></i></div>
+      <div class="stat-value">{{ summary.active }}</div>
+      <div class="stat-label">Ativos</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-secondary-soft"><i class="bi bi-dash-circle text-secondary fs-5"></i></div>
+      <div class="stat-value">{{ summary.inactive }}</div>
+      <div class="stat-label">Inativos</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-info-soft"><i class="bi bi-cash-coin text-info fs-5"></i></div>
+      <div class="stat-value small-value">R$ {{ "%.2f"|format(summary.avg_price)|replace(".", ",") }}</div>
+      <div class="stat-label">Ticket médio (ativos)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Filtros ─────────────────────────────────────────── -->
+<form method="GET" class="row g-2 mb-4">
+  <div class="col-sm-6 col-md-4">
+    <div class="input-group input-group-sm">
+      <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-search"></i></span>
+      <input type="search" name="q"
+             class="form-control form-control-sm bg-dark border-secondary text-light"
+             placeholder="Buscar por nome..." value="{{ q }}" />
+    </div>
+  </div>
+  <div class="col-auto">
+    <select name="status"
+            class="form-select form-select-sm bg-dark border-secondary text-light"
+            onchange="this.form.submit()">
+      <option value="" {% if not status %}selected{% endif %}>Todos os status</option>
+      <option value="active"   {% if status == 'active'   %}selected{% endif %}>Somente ativos</option>
+      <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Somente inativos</option>
+    </select>
+  </div>
+  <div class="col-auto d-flex gap-1">
+    <button type="submit" class="btn btn-sm btn-outline-gold">Filtrar</button>
+    {% if q or status %}
+    <a href="{{ url_for('services.index') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+    {% endif %}
+  </div>
+</form>
+
+<!-- ── Tabela ─────────────────────────────────────────── -->
+{% if services %}
+<div class="card card-dark">
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Serviço</th>
+          <th class="text-center d-none d-md-table-cell">Duração</th>
+          <th class="text-end">Preço</th>
+          <th class="text-center">Status</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in services %}
+        <tr class="{% if not s.is_active %}service-inactive{% endif %}">
+          <td>
+            <div class="fw-semibold">{{ s.name }}</div>
+            {% if s.description %}
+            <div class="text-muted" style="font-size:.76rem">{{ s.description | truncate(70) }}</div>
+            {% endif %}
+            <!-- Duração inline no mobile -->
+            <div class="d-md-none mt-1">
+              <span class="duration-badge">
+                <i class="bi bi-clock me-1"></i>{{ s.duration_formatted }}
+              </span>
+            </div>
+          </td>
+          <td class="text-center d-none d-md-table-cell">
+            <span class="duration-badge">
+              <i class="bi bi-clock me-1"></i>{{ s.duration_formatted }}
+            </span>
+          </td>
+          <td class="text-end">
+            <span class="fw-bold text-accent">{{ s.price_formatted }}</span>
+          </td>
+          <td class="text-center">
+            <span class="badge {% if s.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+              <i class="bi bi-dot me-1" style="font-size:.7rem;line-height:0"></i>
+              {% if s.is_active %}Ativo{% else %}Inativo{% endif %}
+            </span>
+          </td>
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{{ url_for('services.edit', service_id=s.id) }}"
+                 class="btn btn-sm btn-outline-light" title="Editar">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form method="POST" action="{{ url_for('services.toggle', service_id=s.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit"
+                        class="btn btn-sm {% if s.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+                        title="{% if s.is_active %}Desativar{% else %}Ativar{% endif %}">
+                  <i class="bi bi-{% if s.is_active %}pause{% else %}play{% endif %}"></i>
+                </button>
+              </form>
+              <button type="button" class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal" data-bs-target="#delModal{{ s.id }}"
+                      title="Excluir">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Modais de exclusão ─────────────────────────────── -->
+{% for s in services %}
+{% set appt_count = s.appointments.count() %}
+<div class="modal fade" id="delModal{{ s.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark border border-danger border-opacity-50">
+      <div class="modal-header border-danger border-opacity-25">
+        <h6 class="modal-title text-danger fw-bold">
+          <i class="bi bi-exclamation-triangle me-2"></i>Confirmar exclusão
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">Deseja excluir o serviço <strong class="text-white">{{ s.name }}</strong>?</p>
+        <ul class="text-muted small mb-0">
+          <li>Esta ação <strong class="text-danger">não pode ser desfeita</strong></li>
+          {% if appt_count > 0 %}
+          <li class="text-warning mt-1">
+            <i class="bi bi-exclamation-circle me-1"></i>
+            Possui {{ appt_count }} agendamento(s) — <strong>exclusão bloqueada</strong>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+      <div class="modal-footer border-danger border-opacity-25">
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <form method="POST" action="{{ url_for('services.delete', service_id=s.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger btn-sm"
+                  {% if appt_count > 0 %}disabled{% endif %}>
+            <i class="bi bi-trash me-1"></i>Excluir
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+{% else %}
+<!-- Estado vazio -->
+<div class="empty-state">
+  <div class="empty-icon"><i class="bi bi-scissors"></i></div>
+  <h6 class="fw-bold mb-1">
+    {% if q or status %}Nenhum serviço encontrado{% else %}Nenhum serviço cadastrado{% endif %}
+  </h6>
+  <p class="text-muted small mb-3">
+    {% if q or status %}
+      Tente ajustar os filtros de busca.
+    {% else %}
+      Cadastre os serviços oferecidos pela barbearia.
+    {% endif %}
+  </p>
+  {% if not q and not status %}
+  <a href="{{ url_for('services.new') }}" class="btn btn-gold btn-sm">
+    <i class="bi bi-plus-circle me-1"></i>Cadastrar serviço
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.service-inactive { opacity: .5; transition: opacity var(--t-fast); }
+.service-inactive:hover { opacity: .8; }
+
+.duration-badge {
+  display: inline-block;
+  background: rgba(26,63,166,.08);
+  border: 1px solid rgba(26,63,166,.25);
+  border-radius: 2px;
+  padding: 2px 10px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .68rem; font-weight: 700; letter-spacing: .06em;
+  color: #4a72d4;
+}
+
+.badge-active   { background: rgba(46,125,79,.12);  color: #5db882; border: 1px solid rgba(46,125,79,.3); }
+.badge-inactive { background: rgba(85,85,80,.1);    color: #555550; border: 1px solid rgba(85,85,80,.3); }
+.small-value { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem !important; }
+</style>
+{% endblock %}

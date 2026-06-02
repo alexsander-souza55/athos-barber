@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}Agendamentos — Athos Barbearia{% endblock %}
+{% block page_title %}Agendamentos{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ─────────────────────────────────────────────── -->
+<div class="page-header">
+  <div class="page-header-title">
+    <h5>Agenda</h5>
+    <div class="page-header-meta">
+      <span><i class="bi bi-calendar-day me-1 text-accent"></i>{{ filter_date.strftime('%d/%m/%Y') }}</span>
+      {% if filter_date.strftime('%Y-%m-%d') == now.strftime('%Y-%m-%d') %}
+      <span class="badge-athos" style="border-color:rgba(232,232,224,.25);color:var(--c-white);background:rgba(232,232,224,.06)">Hoje</span>
+      {% endif %}
+    </div>
+  </div>
+  {% if current_user.is_admin %}
+  <div class="page-header-actions">
+    <a href="{{ url_for('appointments.book') }}" class="btn btn-sm btn-outline-gold" target="_blank">
+      <i class="bi bi-link-45deg me-1"></i>Link público
+    </a>
+    <a href="{{ url_for('appointments.new') }}" class="btn btn-gold btn-sm fw-semibold">
+      <i class="bi bi-plus-circle me-1"></i>Novo agendamento
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Stats do dia ────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-gold-soft"><i class="bi bi-calendar-day text-accent"></i></div>
+      <div class="stat-value">{{ stats.today_total }}</div>
+      <div class="stat-label">Total hoje</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-info-soft"><i class="bi bi-hourglass-split text-info"></i></div>
+      <div class="stat-value">{{ stats.today_pending }}</div>
+      <div class="stat-label">Em aberto</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-success-soft"><i class="bi bi-check-circle text-success"></i></div>
+      <div class="stat-value">{{ stats.today_completed }}</div>
+      <div class="stat-label">Concluídos</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-secondary-soft"><i class="bi bi-x-circle" style="color:var(--c-text-muted)"></i></div>
+      <div class="stat-value">{{ stats.today_cancelled }}</div>
+      <div class="stat-label">Cancelados</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Filtros ─────────────────────────────────────────────────── -->
+<form method="GET">
+  <div class="filter-bar">
+
+    <!-- Navegação de data -->
+    <div class="d-flex align-items-center gap-1">
+      <a href="{{ url_for('appointments.index', date=prev_date, status=status_filter, barber_id=barber_filter or '') }}"
+         class="btn-date-nav" title="Dia anterior">
+        <i class="bi bi-chevron-left" style="font-size:.8rem"></i>
+      </a>
+      <input type="date" name="date" value="{{ date_str }}"
+             class="form-control form-control-sm"
+             style="width:148px" onchange="this.form.submit()" />
+      <a href="{{ url_for('appointments.index', date=next_date, status=status_filter, barber_id=barber_filter or '') }}"
+         class="btn-date-nav" title="Próximo dia">
+        <i class="bi bi-chevron-right" style="font-size:.8rem"></i>
+      </a>
+      <a href="{{ url_for('appointments.index') }}"
+         class="btn-date-nav ms-1" title="Hoje">
+        <i class="bi bi-calendar-today" style="font-size:.8rem"></i>
+      </a>
+    </div>
+
+    <!-- Status -->
+    <select name="status" class="form-select form-select-sm" style="width:auto;min-width:155px"
+            onchange="this.form.submit()">
+      <option value="" {% if not status_filter %}selected{% endif %}>Todos os status</option>
+      {% for key, label in STATUS_LABELS.items() %}
+      <option value="{{ key }}" {% if status_filter == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <!-- Barbeiro (admin) -->
+    {% if current_user.is_admin and barbers %}
+    <select name="barber_id" class="form-select form-select-sm" style="width:auto;min-width:160px"
+            onchange="this.form.submit()">
+      <option value="" {% if not barber_filter %}selected{% endif %}>Todos os barbeiros</option>
+      {% for b in barbers %}
+      <option value="{{ b.id }}" {% if barber_filter == b.id %}selected{% endif %}>{{ b.name }}</option>
+      {% endfor %}
+    </select>
+    {% endif %}
+
+    {% if status_filter or barber_filter %}
+    <a href="{{ url_for('appointments.index', date=date_str) }}"
+       class="btn btn-sm btn-outline-secondary ms-auto">
+      <i class="bi bi-x me-1"></i>Limpar filtros
+    </a>
+    {% endif %}
+
+  </div>
+</form>
+
+<!-- ── Lista de agendamentos ───────────────────────────────────── -->
+{% if appointments %}
+<div class="card card-dark">
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th style="width:110px">Horário</th>
+          <th>Cliente</th>
+          {% if current_user.is_admin %}
+          <th class="d-none d-md-table-cell">Barbeiro</th>
+          {% endif %}
+          <th class="d-none d-lg-table-cell">Serviço</th>
+          <th style="width:155px">Status</th>
+          <th class="text-end" style="width:60px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in appointments %}
+        <tr class="appt-row {% if a.status in ('cancelled','no_show') %}appt-cancelled{% endif %}">
+
+          <!-- Horário -->
+          <td>
+            <div class="fw-bold text-accent" style="font-size:.9rem">
+              {{ a.scheduled_time.strftime('%H:%M') }}
+            </div>
+            {% if a.end_time_str %}
+            <div class="text-muted" style="font-size:.68rem">até {{ a.end_time_str }}</div>
+            {% endif %}
+          </td>
+
+          <!-- Cliente -->
+          <td>
+            <div class="fw-semibold" style="font-size:.88rem">
+              {{ a.customer.name if a.customer else '—' }}
+            </div>
+            <div class="text-muted d-lg-none" style="font-size:.7rem">
+              {{ a.service.name if a.service else '' }}
+            </div>
+            {% if a.customer and a.customer.phone %}
+            <div class="text-muted d-none d-md-block" style="font-size:.7rem">
+              <i class="bi bi-telephone me-1"></i>{{ a.customer.phone }}
+            </div>
+            {% endif %}
+          </td>
+
+          <!-- Barbeiro -->
+          {% if current_user.is_admin %}
+          <td class="d-none d-md-table-cell text-muted small">
+            {{ a.barber.name if a.barber else '—' }}
+          </td>
+          {% endif %}
+
+          <!-- Serviço -->
+          <td class="d-none d-lg-table-cell">
+            <div style="font-size:.85rem">{{ a.service.name if a.service else '—' }}</div>
+            {% if a.service %}
+            <div class="text-accent" style="font-size:.7rem">{{ a.service.price_formatted }}</div>
+            {% endif %}
+          </td>
+
+          <!-- Status select -->
+          <td>
+            <form method="POST"
+                  action="{{ url_for('appointments.update_status', appt_id=a.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="status"
+                      class="form-select form-select-sm status-select status-{{ a.status }}"
+                      onchange="this.form.submit()">
+                {% for key, label in STATUS_LABELS.items() %}
+                <option value="{{ key }}" {% if a.status == key %}selected{% endif %}>
+                  {{ label }}
+                </option>
+                {% endfor %}
+              </select>
+            </form>
+          </td>
+
+          <!-- Ações -->
+          <td class="text-end">
+            {% if current_user.is_admin %}
+            <button type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    data-bs-toggle="modal"
+                    data-bs-target="#delModal{{ a.id }}"
+                    title="Excluir">
+              <i class="bi bi-trash"></i>
+            </button>
+            {% endif %}
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modais de exclusão -->
+{% if current_user.is_admin %}
+{% for a in appointments %}
+<div class="modal fade" id="delModal{{ a.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content bg-dark border border-danger border-opacity-50">
+      <div class="modal-header border-danger border-opacity-25 py-2">
+        <h6 class="modal-title text-danger fw-bold small">
+          <i class="bi bi-exclamation-triangle me-2"></i>Confirmar exclusão
+        </h6>
+        <button type="button" class="btn-close btn-close-white btn-close-sm"
+                data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body small">
+        Remover agendamento de
+        <strong>{{ a.customer.name if a.customer else '—' }}</strong>
+        às <strong class="text-accent">{{ a.scheduled_time.strftime('%H:%M') }}</strong>?
+      </div>
+      <div class="modal-footer border-danger border-opacity-25 py-2">
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <form method="POST" action="{{ url_for('appointments.delete', appt_id=a.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="bi bi-trash me-1"></i>Excluir
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% else %}
+<!-- Estado vazio -->
+<div class="empty-state">
+  <div class="empty-icon"><i class="bi bi-calendar-x"></i></div>
+  <h6 class="fw-bold mb-1">
+    Nenhum agendamento em {{ filter_date.strftime('%d/%m/%Y') }}
+  </h6>
+  <p class="text-muted small mb-3">
+    {% if status_filter or barber_filter %}
+      Tente remover os filtros aplicados.
+    {% else %}
+      Nenhum agendamento registrado para esta data.
+    {% endif %}
+  </p>
+  {% if current_user.is_admin and not status_filter and not barber_filter %}
+  <div class="d-flex gap-2 justify-content-center">
+    <a href="{{ url_for('appointments.new') }}" class="btn btn-gold btn-sm">
+      <i class="bi bi-plus-circle me-1"></i>Criar agendamento
+    </a>
+    <a href="{{ url_for('appointments.book') }}" class="btn btn-outline-gold btn-sm" target="_blank">
+      <i class="bi bi-link-45deg me-1"></i>Link público
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

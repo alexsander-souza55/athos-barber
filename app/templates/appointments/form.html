@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Novo Agendamento — Athos Barbearia{% endblock %}
+{% block page_title %}Novo Agendamento{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-xl-7 col-lg-8 col-md-10">
+
+    <!-- Breadcrumb -->
+    <nav class="mb-3" aria-label="breadcrumb">
+      <ol class="breadcrumb breadcrumb-dark small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('appointments.index') }}" class="text-accent">Agendamentos</a>
+        </li>
+        <li class="breadcrumb-item active">Novo</li>
+      </ol>
+    </nav>
+
+    <form method="POST" novalidate id="adminApptForm">
+      {{ form.hidden_tag() }}
+
+      <!-- ═ Dados do agendamento ═══════════════════════════ -->
+      <div class="card card-dark mb-4">
+        <div class="card-header">
+          <h6 class="fw-bold mb-0">
+            <i class="bi bi-calendar-plus text-accent me-2"></i>Novo agendamento
+          </h6>
+        </div>
+        <div class="card-body p-4">
+          <div class="row g-3">
+
+            <!-- Cliente -->
+            <div class="col-12">
+              <label class="form-label fw-semibold small">
+                {{ form.customer_id.label.text }} <span class="text-danger">*</span>
+              </label>
+              {{ form.customer_id(
+                  class="form-select bg-dark border-secondary text-light" + (" is-invalid" if form.customer_id.errors else ""),
+                  id="customerSelect"
+              ) }}
+              {% for e in form.customer_id.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              <div class="form-text">
+                Não encontrou? <a href="{{ url_for('customers.new') }}" class="text-accent" target="_blank">Cadastrar cliente</a>
+              </div>
+            </div>
+
+            <!-- Barbeiro + Serviço -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                {{ form.barber_id.label.text }} <span class="text-danger">*</span>
+              </label>
+              {{ form.barber_id(
+                  class="form-select bg-dark border-secondary text-light" + (" is-invalid" if form.barber_id.errors else ""),
+                  id="barberSelect"
+              ) }}
+              {% for e in form.barber_id.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                {{ form.service_id.label.text }} <span class="text-danger">*</span>
+              </label>
+              {{ form.service_id(
+                  class="form-select bg-dark border-secondary text-light" + (" is-invalid" if form.service_id.errors else ""),
+                  id="serviceSelect"
+              ) }}
+              {% for e in form.service_id.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <!-- Data + Horário -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                {{ form.scheduled_date.label.text }} <span class="text-danger">*</span>
+              </label>
+              {{ form.scheduled_date(
+                  class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.scheduled_date.errors else ""),
+                  id="dateInput"
+              ) }}
+              {% for e in form.scheduled_date.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                {{ form.scheduled_time.label.text }} <span class="text-danger">*</span>
+              </label>
+              {{ form.scheduled_time(
+                  class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.scheduled_time.errors else ""),
+                  type="time", step="1800", id="timeInput",
+                  placeholder="09:00"
+              ) }}
+              {% for e in form.scheduled_time.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <!-- Slots disponíveis (carregados via AJAX) -->
+            <div class="col-12" id="slotsSection" style="display:none">
+              <p class="text-muted small mb-2">
+                <i class="bi bi-clock text-accent me-1"></i>Horários disponíveis para a seleção:
+              </p>
+              <div id="slotsGrid" class="d-flex flex-wrap gap-2"></div>
+              <div id="slotsLoading" class="text-muted small" style="display:none">
+                <span class="spinner-border spinner-border-sm me-1"></span>Carregando...
+              </div>
+              <div id="slotsEmpty" class="text-warning small" style="display:none">
+                <i class="bi bi-exclamation-circle me-1"></i>Nenhum horário disponível nesta data.
+              </div>
+            </div>
+
+            <!-- Observações -->
+            <div class="col-12">
+              <label class="form-label fw-semibold small">{{ form.notes.label.text }}</label>
+              {{ form.notes(
+                  class="form-control bg-dark border-secondary text-light",
+                  rows=2,
+                  placeholder="Preferências, informações extras..."
+              ) }}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ═ Ações ════════════════════════════════════════ -->
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-gold px-4 fw-bold">
+          <i class="bi bi-check-circle me-2"></i>Criar agendamento
+        </button>
+        <a href="{{ url_for('appointments.index') }}" class="btn btn-outline-secondary">
+          Cancelar
+        </a>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.breadcrumb-dark .breadcrumb-item.active { color: #6b7280; }
+.breadcrumb-dark .breadcrumb-item + .breadcrumb-item::before { color: #4b5563; }
+.slot-btn {
+  padding: 5px 14px;
+  font-family: 'JetBrains Mono', monospace; font-size: .82rem; border-radius: 2px;
+  border: 1px solid var(--c-border); color: var(--c-text-2);
+  background: transparent; cursor: pointer;
+  transition: border-color var(--t-fast), background var(--t-fast), color var(--t-fast);
+}
+.slot-btn:hover, .slot-btn.active {
+  background: var(--c-white); color: #0a0a0a; font-weight: 700; border-color: var(--c-white);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const barberSel  = document.getElementById('barberSelect');
+const serviceSel = document.getElementById('serviceSelect');
+const dateInput  = document.getElementById('dateInput');
+const timeInput  = document.getElementById('timeInput');
+const slotsSection = document.getElementById('slotsSection');
+const slotsGrid    = document.getElementById('slotsGrid');
+const slotsLoading = document.getElementById('slotsLoading');
+const slotsEmpty   = document.getElementById('slotsEmpty');
+
+function maybeLoadSlots() {
+  const barberId  = barberSel.value;
+  const serviceId = serviceSel.value;
+  const dateVal   = dateInput.value;
+  if (!barberId || !serviceId || !dateVal) { slotsSection.style.display = 'none'; return; }
+
+  slotsSection.style.display = 'block';
+  slotsGrid.innerHTML = '';
+  slotsLoading.style.display = 'block';
+  slotsEmpty.style.display = 'none';
+
+  fetch(`/appointments/slots?barber_id=${barberId}&service_id=${serviceId}&date=${dateVal}`)
+    .then(r => r.json())
+    .then(data => {
+      slotsLoading.style.display = 'none';
+      if (!data.slots || data.slots.length === 0) {
+        slotsEmpty.style.display = 'block'; return;
+      }
+      data.slots.forEach(slot => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'slot-btn' + (timeInput.value === slot ? ' active' : '');
+        btn.textContent = slot;
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          timeInput.value = slot;
+        });
+        slotsGrid.appendChild(btn);
+      });
+    })
+    .catch(() => { slotsLoading.style.display = 'none'; slotsEmpty.style.display = 'block'; });
+}
+
+[barberSel, serviceSel, dateInput].forEach(el => {
+  if (el) el.addEventListener('change', maybeLoadSlots);
+});
+maybeLoadSlots();
+</script>
+{% endblock %}

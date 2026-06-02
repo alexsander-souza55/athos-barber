@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Meu Perfil — Athos Barbearia{% endblock %}
+{% block page_title %}Meu Perfil{% endblock %}
+
+{% block content %}
+<div class="row g-4 mt-1">
+
+  <!-- Card lateral com info do usuário -->
+  <div class="col-md-4 col-lg-3">
+    <div class="card card-dark text-center">
+      <div class="card-body py-4">
+        <!-- Avatar com iniciais -->
+        <div class="avatar-xl mx-auto mb-3">
+          {{ current_user.display_name[0]|upper }}
+        </div>
+
+        <h5 class="fw-bold mb-1">{{ current_user.display_name }}</h5>
+        <p class="text-muted small mb-2">@{{ current_user.username }}</p>
+        <span class="badge bg-{{ current_user.role_badge_color }} fs-7 px-3 py-2">
+          <i class="bi bi-{% if current_user.is_admin %}shield{% else %}scissors{% endif %} me-1"></i>
+          {{ current_user.role_label }}
+        </span>
+
+        <hr class="border-secondary my-3">
+
+        <!-- Stats -->
+        <div class="row g-0 text-center">
+          <div class="col">
+            <div class="fw-bold fs-5">{{ current_user.login_count or 0 }}</div>
+            <div class="text-muted" style="font-size:.7rem">Logins</div>
+          </div>
+          <div class="col border-start border-secondary">
+            <div class="fw-bold fs-5 text-{% if current_user.is_active %}success{% else %}danger{% endif %}">
+              {{ "Ativo" if current_user.is_active else "Inativo" }}
+            </div>
+            <div class="text-muted" style="font-size:.7rem">Status</div>
+          </div>
+        </div>
+
+        {% if current_user.last_login %}
+        <hr class="border-secondary my-3">
+        <p class="text-muted small mb-0">
+          <i class="bi bi-clock me-1"></i>
+          Último login: {{ current_user.last_login.strftime('%d/%m/%Y %H:%M') }}
+        </p>
+        {% endif %}
+      </div>
+
+      <div class="card-footer border-secondary">
+        <a href="{{ url_for('auth.change_password') }}" class="btn btn-outline-gold btn-sm w-100">
+          <i class="bi bi-key me-1"></i>Alterar senha
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulário de edição -->
+  <div class="col-md-8 col-lg-9">
+    <div class="card card-dark">
+      <div class="card-header">
+        <h6 class="fw-bold mb-0"><i class="bi bi-pencil-square text-accent me-2"></i>Editar dados</h6>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+
+          <!-- E-mail -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-envelope me-1 text-accent"></i>{{ form.email.label.text }}
+            </label>
+            {{ form.email(
+                class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.email.errors else ""),
+                placeholder="seu@email.com"
+            ) }}
+            {% for e in form.email.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          {% if current_user.is_barber and current_user.barber_profile %}
+          <hr class="border-secondary">
+          <p class="text-muted small mb-3 text-uppercase" style="letter-spacing:1px; font-size:.7rem">
+            <i class="bi bi-person-badge me-1"></i>Perfil de Barbeiro
+          </p>
+
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold">{{ form.name.label.text }}</label>
+              {{ form.name(
+                  class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.name.errors else ""),
+                  placeholder="Nome que aparece para clientes"
+              ) }}
+              {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ form.phone.label.text }}</label>
+              {{ form.phone(
+                  class="form-control bg-dark border-secondary text-light",
+                  placeholder="(00) 00000-0000"
+              ) }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ form.specialty.label.text }}</label>
+              {{ form.specialty(
+                  class="form-control bg-dark border-secondary text-light",
+                  placeholder="Ex: Degradê, Barba, Coloração..."
+              ) }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">{{ form.bio.label.text }}</label>
+              {{ form.bio(
+                  class="form-control bg-dark border-secondary text-light",
+                  rows=3,
+                  placeholder="Uma breve descrição sobre você..."
+              ) }}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="mt-4">
+            {{ form.submit(class="btn btn-gold px-4") }}
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary ms-2">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Segurança -->
+    <div class="card card-dark mt-3">
+      <div class="card-header">
+        <h6 class="fw-bold mb-0"><i class="bi bi-shield-lock text-accent me-2"></i>Segurança da conta</h6>
+      </div>
+      <div class="card-body p-4">
+        <div class="row g-3 align-items-center">
+          <div class="col-md-8">
+            <p class="mb-1 fw-semibold">Senha</p>
+            <p class="text-muted small mb-0">
+              Por segurança, use uma senha de pelo menos 8 caracteres com letras e números.
+            </p>
+          </div>
+          <div class="col-md-4 text-md-end">
+            <a href="{{ url_for('auth.change_password') }}" class="btn btn-outline-gold btn-sm">
+              <i class="bi bi-key me-1"></i>Alterar senha
+            </a>
+          </div>
+        </div>
+        {% if current_user.failed_attempts > 0 %}
+        <hr class="border-secondary">
+        <p class="text-warning small mb-0">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          {{ current_user.failed_attempts }} tentativa(s) de login falha(s) registrada(s) na sua conta.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-xl {
+  width: 72px; height: 72px;
+  background: #1a1a1a;
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--c-text-2);
+}
+.fs-7 { font-size: .8rem; }
+</style>
+{% endblock %}

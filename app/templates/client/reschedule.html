@@ -1,0 +1,347 @@
+{% extends "base_public.html" %}
+{% block title %}Remarcar Agendamento{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-xl-7">
+
+    <!-- Título -->
+    <div class="text-center mb-4">
+      <h3 class="fw-bold mb-1" style="font-family:'Playfair Display',serif">Remarcar Agendamento</h3>
+      <p class="text-muted small">Escolha o novo barbeiro, data e horário.</p>
+    </div>
+
+    <!-- Info do agendamento original -->
+    <div class="original-card mb-4">
+      <div class="original-card-label">Agendamento atual</div>
+      <div class="original-card-body">
+        <div>
+          <span class="appt-label">Serviço</span>
+          <span class="appt-value">{{ appt.service.name if appt.service else '—' }}
+            {% if appt.service %}
+            <span style="font-family:'JetBrains Mono',monospace;color:var(--c-white)">
+              · {{ appt.service.price_formatted }}
+            </span>
+            {% endif %}
+          </span>
+        </div>
+        <div>
+          <span class="appt-label">Data/Hora atual</span>
+          <span class="appt-value" style="font-family:'JetBrains Mono',monospace">
+            {{ appt.scheduled_date.strftime('%d/%m/%Y') }} às {{ appt.scheduled_time.strftime('%H:%M') }}
+          </span>
+        </div>
+        <div>
+          <span class="appt-label">Barbeiro atual</span>
+          <span class="appt-value">{{ appt.barber.name if appt.barber else '—' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulário de remarcação -->
+    <form method="POST" action="{{ url_for('client.reschedule_appointment', appt_id=appt.id) }}" id="rescheduleForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="cpf" value="{{ cpf }}">
+      <input type="hidden" name="scheduled_date" id="inp_date" value="{{ selected_date }}">
+      <input type="hidden" name="scheduled_time" id="inp_time" value="{{ selected_time }}">
+
+      <!-- Passo 1: Barbeiro -->
+      <div class="rsch-card mb-3">
+        <div class="rsch-card-header">
+          <div class="step-num">1</div>
+          <div class="step-title">Escolha o barbeiro</div>
+          <div id="lbl_barber" class="step-chosen ms-2"></div>
+        </div>
+        <div class="rsch-card-body">
+          <div class="row g-2">
+            {% for b in barbers %}
+            <div class="col-6 col-md-4">
+              <div class="opt-card opt-card-barber"
+                   data-id="{{ b.id }}"
+                   data-label="{{ b.name }}"
+                   {% if b.id == selected_barber_id %}data-preselect="1"{% endif %}>
+                {% if b.photo_url %}
+                <img src="{{ b.photo_url }}" class="barber-thumb mb-2" alt="{{ b.name }}">
+                {% else %}
+                <div class="barber-initials-sm mx-auto mb-2">{{ b.initials }}</div>
+                {% endif %}
+                <div class="opt-name">{{ b.name }}</div>
+                {% if b.specialty %}
+                <div class="opt-info">{{ b.specialty }}</div>
+                {% endif %}
+                {% if b.work_hours_str != '—' %}
+                <div class="opt-info"><i class="bi bi-clock me-1"></i>{{ b.work_hours_str }}</div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Passo 2: Data -->
+      <div class="rsch-card mb-3 {% if not selected_barber_id %}rsch-locked{% endif %}" id="step_date">
+        <div class="rsch-card-header">
+          <div class="step-num">2</div>
+          <div class="step-title">Escolha a data</div>
+          <div id="lbl_date" class="step-chosen ms-2"></div>
+          {% if not selected_barber_id %}<div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>{% endif %}
+        </div>
+        <div class="rsch-card-body" id="body_date" {% if not selected_barber_id %}style="display:none"{% endif %}>
+          <input type="date" id="datePickerInput"
+                 class="form-control bg-dark border-secondary text-light"
+                 style="max-width:220px"
+                 min="{{ today.strftime('%Y-%m-%d') }}"
+                 value="{{ selected_date }}">
+        </div>
+      </div>
+
+      <!-- Passo 3: Horário -->
+      <div class="rsch-card mb-4 {% if not selected_date %}rsch-locked{% endif %}" id="step_time">
+        <div class="rsch-card-header">
+          <div class="step-num">3</div>
+          <div class="step-title">Escolha o horário</div>
+          <div id="lbl_time" class="step-chosen ms-2"></div>
+          {% if not selected_date %}<div class="step-lock-icon ms-auto"><i class="bi bi-lock"></i></div>{% endif %}
+        </div>
+        <div class="rsch-card-body" id="body_time" {% if not selected_date %}style="display:none"{% endif %}>
+          <div id="slots_loading" class="text-muted small" style="display:none">
+            <span class="spinner-border spinner-border-sm me-1"></span>Verificando disponibilidade...
+          </div>
+          <div id="slots_empty" class="text-warning small" style="display:none">
+            <i class="bi bi-exclamation-circle me-1"></i>Nenhum horário disponível nesta data. Tente outro dia.
+          </div>
+          <div id="slots_grid" class="d-flex flex-wrap gap-2 mt-2"></div>
+        </div>
+      </div>
+
+      <button type="submit" id="btnReschedule"
+              class="btn btn-gold w-100 py-3 fw-bold fs-5" disabled>
+        <i class="bi bi-calendar-check me-2"></i>Confirmar remarcação
+      </button>
+
+      <div class="text-center mt-3">
+        <a href="{{ url_for('client.lookup') }}" class="text-muted small">
+          <i class="bi bi-arrow-left me-1"></i>Voltar
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.original-card {
+  background: rgba(204,31,31,.05);
+  border: 1px solid rgba(204,31,31,.22);
+  border-radius: 4px; padding: 18px 20px;
+}
+.original-card-label {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .65rem; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--c-red); margin-bottom: 10px;
+}
+.original-card-body {
+  display: flex; gap: 24px; flex-wrap: wrap;
+}
+.appt-label {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .65rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--c-text-muted); display: block; margin-bottom: 2px;
+}
+.appt-value {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .82rem; color: var(--c-text);
+}
+
+.rsch-card {
+  background: var(--c-bg-2); border: 1px solid var(--c-border);
+  border-radius: 4px; overflow: hidden;
+  transition: border-color .15s;
+}
+.rsch-card.rsch-locked { opacity: .45; pointer-events: none; }
+.rsch-card-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; background: #0d0d0d;
+  border-bottom: 1px solid var(--c-border);
+}
+.rsch-card-body { padding: 16px 18px 20px; }
+
+.step-num {
+  width: 26px; height: 26px; border-radius: 2px;
+  background: var(--c-red-dim); border: 1px solid rgba(204,31,31,.4);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700; font-size: .8rem; color: var(--c-text-2);
+  flex-shrink: 0;
+}
+.rsch-card.step-done .step-num {
+  background: var(--c-red); color: #fff; border-color: var(--c-red);
+}
+.step-title {
+  font-family: 'Josefin Sans', sans-serif;
+  font-weight: 700; font-size: .75rem;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--c-text-2);
+}
+.step-chosen {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .72rem; color: var(--c-white);
+}
+.step-lock-icon { color: var(--c-text-muted); font-size: .8rem; }
+
+.opt-card {
+  background: rgba(255,255,255,.02); border: 1px solid var(--c-border);
+  border-radius: 4px; padding: 12px 10px; cursor: pointer;
+  transition: border-color .12s, background .12s;
+  text-align: center;
+}
+.opt-card:hover { border-color: rgba(204,31,31,.45); background: rgba(204,31,31,.04); }
+.opt-card.selected { border-color: var(--c-white); background: rgba(232,232,224,.05); }
+.opt-name {
+  font-family: 'Josefin Sans', sans-serif;
+  font-weight: 700; font-size: .82rem; color: var(--c-text); margin-bottom: 4px;
+}
+.opt-info {
+  font-family: 'Josefin Sans', sans-serif;
+  color: var(--c-text-muted); font-size: .67rem; margin-top: 3px;
+}
+.barber-thumb {
+  width: 52px; height: 52px; border-radius: 2px;
+  object-fit: cover; border: 1px solid var(--c-border);
+  display: block; margin: 0 auto;
+}
+.barber-initials-sm {
+  width: 52px; height: 52px; border-radius: 2px;
+  background: #1a1a1a; border: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-weight: 700; font-size: 1rem; color: var(--c-text-2);
+}
+.slot-btn {
+  padding: 6px 14px; border-radius: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .8rem; border: 1px solid var(--c-border);
+  color: var(--c-text-2); background: transparent; cursor: pointer;
+  transition: border-color .12s, background .12s, color .12s;
+}
+.slot-btn:hover { background: var(--c-red-dim); border-color: var(--c-red-border); color: var(--c-text); }
+.slot-btn.selected { background: var(--c-white); color: #0a0a0a; font-weight: 700; border-color: var(--c-white); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SERVICE_ID  = {{ appt.service_id }};
+const EXCLUDE_ID  = {{ appt.id }};
+
+let selectedBarberId = null;
+let selectedDate     = '';
+let selectedTime     = '';
+
+const inpDate = document.getElementById('inp_date');
+const inpTime = document.getElementById('inp_time');
+const btnRsch = document.getElementById('btnReschedule');
+
+function updateBtn() {
+  btnRsch.disabled = !(selectedBarberId && selectedDate && selectedTime);
+}
+
+// ── Barbeiro ───────────────────────────────────────────
+document.querySelectorAll('.opt-card-barber').forEach(card => {
+  card.addEventListener('click', function () {
+    document.querySelectorAll('.opt-card-barber').forEach(c => c.classList.remove('selected'));
+    this.classList.add('selected');
+    const changed = selectedBarberId !== parseInt(this.dataset.id);
+    selectedBarberId = parseInt(this.dataset.id);
+    document.getElementById('lbl_barber').textContent = this.dataset.label;
+    if (changed) {
+      selectedDate = ''; selectedTime = '';
+      inpDate.value = ''; inpTime.value = '';
+      document.getElementById('slots_grid').innerHTML = '';
+      document.getElementById('slots_empty').style.display = 'none';
+      document.getElementById('lbl_date').textContent = '';
+      document.getElementById('lbl_time').textContent = '';
+      const dp = document.getElementById('datePickerInput');
+      if (dp) dp.value = '';
+    }
+    unlockStep('step_date');
+    updateBtn();
+  });
+  // Preselect
+  if (this.dataset.preselect) {
+    this.click();
+  }
+});
+
+function unlockStep(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('rsch-locked');
+  const body = el.querySelector('.rsch-card-body');
+  if (body) body.style.display = 'block';
+  const lock = el.querySelector('.step-lock-icon');
+  if (lock) lock.style.display = 'none';
+}
+
+// ── Data ───────────────────────────────────────────────
+const datePicker = document.getElementById('datePickerInput');
+if (datePicker) {
+  datePicker.addEventListener('change', function () {
+    if (!this.value) return;
+    selectedDate = this.value;
+    inpDate.value = selectedDate;
+    selectedTime = ''; inpTime.value = '';
+    document.getElementById('slots_grid').innerHTML = '';
+    document.getElementById('slots_empty').style.display = 'none';
+    document.getElementById('lbl_time').textContent = '';
+    const [y, m, d] = selectedDate.split('-');
+    document.getElementById('lbl_date').textContent = `${d}/${m}/${y}`;
+    unlockStep('step_time');
+    loadSlots();
+    updateBtn();
+  });
+  if (datePicker.value) datePicker.dispatchEvent(new Event('change'));
+}
+
+// ── Slots ──────────────────────────────────────────────
+function loadSlots() {
+  if (!selectedBarberId || !selectedDate) return;
+  const grid  = document.getElementById('slots_grid');
+  const spin  = document.getElementById('slots_loading');
+  const empty = document.getElementById('slots_empty');
+  grid.innerHTML = '';
+  spin.style.display = 'block';
+  empty.style.display = 'none';
+
+  fetch(`/client/slots?barber_id=${selectedBarberId}&service_id=${SERVICE_ID}&date=${selectedDate}&exclude_id=${EXCLUDE_ID}`)
+    .then(r => r.json())
+    .then(data => {
+      spin.style.display = 'none';
+      if (!data.slots || data.slots.length === 0) {
+        empty.style.display = 'block'; return;
+      }
+      data.slots.forEach(slot => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'slot-btn' + (slot === '{{ selected_time }}' ? ' selected' : '');
+        btn.textContent = slot;
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+          this.classList.add('selected');
+          selectedTime = slot;
+          inpTime.value = slot;
+          document.getElementById('lbl_time').textContent = slot;
+          updateBtn();
+        });
+        grid.appendChild(btn);
+      });
+    })
+    .catch(() => {
+      spin.style.display = 'none';
+      empty.style.display = 'block';
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,540 @@
+{% extends "base.html" %}
+{% block title %}{{ raffle.name }} — Sorteio{% endblock %}
+{% block page_title %}Sorteio{% endblock %}
+
+{% block content %}
+
+<!-- ── Breadcrumb ─────────────────────────────────────────────────────── -->
+<nav class="mb-4 mt-1" aria-label="breadcrumb">
+  <ol class="breadcrumb breadcrumb-dark small">
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('raffle.index') }}" class="text-accent">Sorteios</a>
+    </li>
+    <li class="breadcrumb-item active text-truncate" style="max-width:260px">
+      {{ raffle.name }}
+    </li>
+  </ol>
+</nav>
+
+<div class="row g-4">
+
+  <!-- ══ Coluna esquerda — Informações ═════════════════════════════════ -->
+  <div class="col-lg-4">
+
+    <!-- Card info principal -->
+    <div class="card card-dark mb-3">
+      <div class="card-body text-center py-4 px-4">
+
+        <!-- Ícone com estado -->
+        <div class="raffle-detail-icon
+          {% if raffle.status == 'drawn' %}raffle-detail-icon--drawn{% endif %}
+          mx-auto mb-3">
+          <i class="bi bi-trophy"></i>
+        </div>
+
+        <h5 class="fw-bold mb-1">{{ raffle.name }}</h5>
+        {% if raffle.description %}
+        <p class="text-muted small mb-2">{{ raffle.description }}</p>
+        {% endif %}
+
+        <!-- Badge de status -->
+        <span class="badge fs-6 px-3 py-2 mb-3
+          {% if raffle.status == 'drawn' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+          {% if raffle.status == 'drawn' %}
+          <i class="bi bi-check-circle me-1"></i>Sorteado
+          {% else %}
+          <i class="bi bi-hourglass-split me-1"></i>Pendente
+          {% endif %}
+        </span>
+
+        <hr class="border-secondary my-3">
+
+        <!-- Metadados -->
+        <dl class="text-start raffle-meta">
+
+          {% if raffle.prize %}
+          <div class="meta-row">
+            <dt><i class="bi bi-gift text-accent"></i></dt>
+            <dd>{{ raffle.prize }}</dd>
+          </div>
+          {% endif %}
+
+          <div class="meta-row">
+            <dt><i class="bi bi-calendar-range text-accent"></i></dt>
+            <dd>{{ raffle.period_str }}</dd>
+          </div>
+
+          <div class="meta-row">
+            <dt><i class="bi bi-people text-accent"></i></dt>
+            <dd>
+              {% if raffle.status == 'drawn' %}
+              <strong class="text-accent">{{ raffle.drawn_winners_count }}</strong>
+              de
+              <strong>{{ raffle.pool_size or '—' }}</strong> sorteados
+              {% else %}
+              <strong>{{ raffle.winner_count }}</strong> vencedor(es) a sortear
+              {% endif %}
+            </dd>
+          </div>
+
+          {% if raffle.status == 'drawn' and raffle.drawn_at %}
+          <div class="meta-row">
+            <dt><i class="bi bi-clock-history text-muted"></i></dt>
+            <dd class="text-muted small">
+              {{ raffle.drawn_at.strftime('%d/%m/%Y às %H:%M') }}
+            </dd>
+          </div>
+          {% endif %}
+
+        </dl>
+
+      </div>
+
+      <!-- Ação principal -->
+      {% if raffle.status == 'pending' %}
+      <div class="card-footer border-secondary px-4 pb-4 pt-0 border-0">
+        {% if pool_count > 0 %}
+        <!-- Botão de sortear — abre modal de confirmação -->
+        <button type="button" class="btn btn-gold w-100 fw-bold py-2"
+                data-bs-toggle="modal" data-bs-target="#drawModal">
+          <i class="bi bi-shuffle me-2"></i>Realizar sorteio agora
+        </button>
+        {% else %}
+        <button class="btn btn-secondary w-100" disabled>
+          <i class="bi bi-exclamation-circle me-2"></i>Sem clientes elegíveis
+        </button>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Botão excluir -->
+    <button type="button" class="btn btn-outline-danger w-100 btn-sm"
+            data-bs-toggle="modal" data-bs-target="#deleteModal">
+      <i class="bi bi-trash me-1"></i>Excluir este sorteio
+    </button>
+
+  </div>
+
+  <!-- ══ Coluna direita ════════════════════════════════════════════════ -->
+  <div class="col-lg-8">
+
+    {% if raffle.status == 'pending' %}
+    <!-- ── Pool de participantes ───────────────────────────────────── -->
+    <div class="card card-dark">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h6 class="fw-bold mb-0">
+          <i class="bi bi-people text-accent me-2"></i>Pool de participantes
+        </h6>
+        <span class="badge-athos" style="border-color:var(--c-white-border);color:var(--c-white)">período selecionado</span>
+      </div>
+      <div class="card-body p-4">
+
+        {% if pool_count > 0 %}
+
+        <!-- Contador grande -->
+        <div class="pool-counter mb-4">
+          <div class="pool-counter-number">{{ pool_count }}</div>
+          <div class="pool-counter-label">
+            cliente(s) elegível(s) no período
+          </div>
+        </div>
+
+        <!-- Barra de proporção -->
+        {% set pct = [((raffle.winner_count / pool_count) * 100)|round|int, 100]|min %}
+        <div class="mb-1 d-flex justify-content-between small">
+          <span class="text-muted">Vencedores solicitados</span>
+          <span class="fw-semibold">
+            {{ [raffle.winner_count, pool_count]|min }}
+            de {{ pool_count }}
+          </span>
+        </div>
+        <div class="progress mb-3" style="height:8px">
+          <div class="progress-bar" style="width:{{ pct }}%;background:var(--c-white)"></div>
+        </div>
+
+        <!-- Aviso se pool < winner_count -->
+        {% if pool_count < raffle.winner_count %}
+        <div class="alert alert-warning py-2 small mb-3">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          O pool tem menos clientes ({{ pool_count }}) do que os vencedores
+          solicitados ({{ raffle.winner_count }}).
+          Serão sorteados <strong>{{ pool_count }}</strong> vencedor(es).
+        </div>
+        {% endif %}
+
+        <!-- Prévia dos nomes (primeiros 10) -->
+        <p class="text-muted small mb-2 fw-semibold">
+          <i class="bi bi-eye me-1"></i>
+          Prévia do pool
+          {% if pool_count > 10 %}
+          <span class="fw-normal">(primeiros 10 de {{ pool_count }})</span>
+          {% endif %}
+        </p>
+        <div class="pool-preview-grid">
+          {% for c in pool_sample %}
+          <div class="pool-chip">
+            <span class="pool-chip-avatar">{{ c.initials }}</span>
+            <span class="pool-chip-name">{{ c.name }}</span>
+          </div>
+          {% endfor %}
+          {% if pool_count > 10 %}
+          <div class="pool-chip pool-chip-more">
+            +{{ pool_count - 10 }} mais
+          </div>
+          {% endif %}
+        </div>
+
+        {% else %}
+
+        <!-- Pool vazio -->
+        <div class="text-center py-5">
+          <i class="bi bi-person-x" style="font-size:3rem;color:rgba(255,255,255,.1)"></i>
+          <h6 class="fw-bold mt-3 mb-2">Nenhum cliente elegível</h6>
+          <p class="text-muted small mb-0">
+            Não há atendimentos <strong>concluídos</strong> no período
+            <strong>{{ raffle.period_str }}</strong>.
+          </p>
+          <p class="text-muted small">
+            Verifique se os agendamentos foram marcados como "Concluído"
+            e ajuste as datas se necessário.
+          </p>
+        </div>
+
+        {% endif %}
+
+      </div>
+    </div>
+
+    {% else %}
+    <!-- ── Resultado do sorteio ────────────────────────────────────── -->
+    <div class="card card-dark">
+      <div class="card-header">
+        <h6 class="fw-bold mb-0">
+          <i class="bi bi-stars text-accent me-2"></i>
+          Resultado — {{ winners|length }} vencedor(es) sorteado(s)
+        </h6>
+      </div>
+      <div class="card-body p-4">
+
+        {% if winners %}
+        <div class="d-flex flex-column gap-3" id="winnersContainer">
+          {% for w in winners %}
+          <div class="winner-card winner-card--{{ w.medal_class }}"
+               style="--delay: {{ loop.index0 * 0.18 }}s">
+
+            <!-- Medalha / posição -->
+            <div class="winner-medal winner-medal--{{ w.medal_class }}">
+              {% if w.position <= 3 %}
+              <i class="bi bi-trophy"></i>
+              {% else %}
+              <i class="bi bi-star"></i>
+              {% endif %}
+            </div>
+
+            <!-- Corpo -->
+            <div class="winner-body flex-grow-1 mw-0">
+
+              <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                  <div class="winner-position-label">{{ w.position_label }}</div>
+                  <div class="winner-name">{{ w.customer_name }}</div>
+                </div>
+                <!-- Avatar de iniciais -->
+                <div class="winner-avatar winner-avatar--{{ w.medal_class }}">
+                  {{ w.initials }}
+                </div>
+              </div>
+
+              <!-- Telefone -->
+              {% if w.customer_phone %}
+              <div class="winner-phone mt-2" id="phoneRow{{ w.id }}">
+                <i class="bi bi-telephone me-2 text-muted"></i>
+                <span class="phone-value">{{ w.customer_phone }}</span>
+                <button type="button"
+                        class="btn-copy"
+                        onclick="copyPhone('{{ w.customer_phone }}', this)"
+                        title="Copiar telefone">
+                  <i class="bi bi-clipboard"></i>
+                </button>
+              </div>
+              {% else %}
+              <div class="winner-phone mt-2 text-muted small">
+                <i class="bi bi-telephone-x me-2"></i>Telefone não informado
+              </div>
+              {% endif %}
+
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {% else %}
+        <p class="text-muted text-center py-4">Nenhum vencedor registrado.</p>
+        {% endif %}
+
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- ═══ Modal: confirmar sorteio ═══════════════════════════════════════ -->
+{% if raffle.status == 'pending' and pool_count > 0 %}
+<div class="modal fade" id="drawModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark border border-secondary border-opacity-50">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-bold">
+          <i class="bi bi-shuffle text-accent me-2"></i>Confirmar sorteio
+        </h6>
+        <button type="button" class="btn-close btn-close-white"
+                data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body small pt-2">
+        <p class="mb-2">Você está prestes a realizar o sorteio:</p>
+        <ul class="mb-3">
+          <li>Pool: <strong>{{ pool_count }}</strong> cliente(s) elegível(s)</li>
+          <li>Vencedores: <strong>{{ [raffle.winner_count, pool_count]|min }}</strong></li>
+          <li>Período: <strong>{{ raffle.period_str }}</strong></li>
+        </ul>
+        <div class="alert alert-warning py-2 mb-0">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          <strong>Esta ação não pode ser desfeita.</strong>
+          O resultado ficará registrado permanentemente.
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary btn-sm"
+                data-bs-dismiss="modal">Cancelar</button>
+        <form method="POST"
+              action="{{ url_for('raffle.draw', raffle_id=raffle.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-gold btn-sm fw-bold px-4">
+            <i class="bi bi-shuffle me-1"></i>Sortear agora!
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ═══ Modal: excluir ═══════════════════════════════════════════════ -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content bg-dark border border-danger border-opacity-50">
+      <div class="modal-header border-danger border-opacity-25 py-2">
+        <h6 class="modal-title text-danger fw-bold small">
+          <i class="bi bi-exclamation-triangle me-2"></i>Confirmar exclusão
+        </h6>
+        <button type="button" class="btn-close btn-close-white btn-close-sm"
+                data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body small">
+        Excluir o sorteio <strong>«{{ raffle.name }}»</strong>?
+        {% if raffle.status == 'drawn' %}
+        <br><span class="text-warning">
+          <i class="bi bi-exclamation-circle me-1"></i>
+          O histórico de vencedores também será apagado.
+        </span>
+        {% endif %}
+      </div>
+      <div class="modal-footer border-danger border-opacity-25 py-2">
+        <button class="btn btn-outline-secondary btn-sm"
+                data-bs-dismiss="modal">Cancelar</button>
+        <form method="POST"
+              action="{{ url_for('raffle.delete', raffle_id=raffle.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="bi bi-trash me-1"></i>Excluir
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.breadcrumb-dark .breadcrumb-item.active { color: #6b7280; }
+.breadcrumb-dark .breadcrumb-item + .breadcrumb-item::before { color: #4b5563; }
+
+/* ── Ícone do sorteio ─────────────────────────────────────────────── */
+.raffle-detail-icon {
+  width: 72px; height: 72px;
+  border-radius: 4px;
+  background: rgba(107,114,128,.1);
+  border: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem;
+  color: #6b7280;
+}
+.raffle-detail-icon--drawn {
+  background: rgba(204,31,31,.12);
+  border-color: rgba(204,31,31,.35);
+  color: var(--c-white);
+}
+
+/* ── Metadados ────────────────────────────────────────────────────── */
+.raffle-meta { display: flex; flex-direction: column; gap: 8px; }
+.meta-row { display: flex; align-items: flex-start; gap: 10px; margin: 0; }
+.meta-row dt { width: 16px; flex-shrink: 0; margin: 0; font-size: .9rem; padding-top:1px; }
+.meta-row dd { margin: 0; font-size: .82rem; color: #d1d5db; flex: 1; }
+
+/* ── Progress bar ─────────────────────────────────────────────────── */
+.progress { background: rgba(255,255,255,.06) !important; }
+
+/* ── Pool counter ─────────────────────────────────────────────────── */
+.pool-counter { text-align: center; }
+.pool-counter-number {
+  font-size: 4rem; font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--c-text); line-height: 1;
+}
+.pool-counter-label { color: #6b7280; font-size: .85rem; }
+
+/* ── Pool chips ───────────────────────────────────────────────────── */
+.pool-preview-grid {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.pool-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 4px 12px 4px 4px;
+  font-size: .78rem;
+}
+.pool-chip-avatar {
+  width: 22px; height: 22px;
+  background: #1a1a1a;
+  border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .6rem; font-weight: 700; color: var(--c-white);
+  font-family: 'Playfair Display', serif;
+  flex-shrink: 0;
+}
+.pool-chip-name { color: #e5e7eb; }
+.pool-chip-more {
+  color: #6b7280;
+  font-style: italic;
+  border-style: dashed;
+}
+
+/* ── Winner cards ─────────────────────────────────────────────────── */
+@keyframes winnerReveal {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.winner-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 20px;
+  opacity: 0;
+  animation: winnerReveal .45s ease forwards;
+  animation-delay: var(--delay, 0s);
+}
+.winner-card--gold   { border-color: rgba(204,31,31,.45); }
+.winner-card--silver { border-color: rgba(192,192,192,.25); }
+.winner-card--bronze { border-color: rgba(205,127,50,.25); }
+
+/* Medalha */
+.winner-medal {
+  width: 48px; height: 48px;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+.winner-medal--gold   { background: rgba(204,31,31,.18); color: var(--c-white); }
+.winner-medal--silver { background: rgba(192,192,192,.15); color: #c0c0c0; }
+.winner-medal--bronze { background: rgba(205,127,50,.15); color: #cd7f32; }
+.winner-medal--default { background: rgba(107,114,128,.12); color: #6b7280; }
+
+/* Texto */
+.winner-position-label {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .72rem; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;
+}
+.winner-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem; font-weight: 700; color: var(--c-text);
+}
+
+/* Avatar de iniciais */
+.winner-avatar {
+  width: 46px; height: 46px;
+  border-radius: 4px;
+  background: #1a1a1a;
+  border: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: .9rem; font-weight: 700;
+  color: var(--c-text-2);
+  flex-shrink: 0;
+}
+.winner-avatar--gold   { border-color: rgba(204,31,31,.4); }
+.winner-avatar--silver { border-color: rgba(192,192,192,.2); }
+.winner-avatar--bronze { border-color: rgba(205,127,50,.2); }
+
+/* Telefone + botão copiar */
+.winner-phone {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .82rem;
+  color: #d1d5db;
+}
+.btn-copy {
+  background: none;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 2px;
+  color: #6b7280;
+  padding: 2px 7px;
+  font-size: .75rem;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.btn-copy:hover { border-color: var(--c-white); color: var(--c-white); }
+.btn-copy.copied { border-color: #4ade80; color: #4ade80; }
+
+/* Min-width 0 */
+.mw-0 { min-width: 0; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{% if raffle.status == 'drawn' and winners %}
+<script>
+function copyPhone(phone, btn) {
+  if (!navigator.clipboard) {
+    /* Fallback para navegadores sem clipboard API */
+    const ta = document.createElement('textarea');
+    ta.value = phone;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  } else {
+    navigator.clipboard.writeText(phone);
+  }
+  const icon = btn.querySelector('i');
+  icon.className = 'bi bi-check-lg';
+  btn.classList.add('copied');
+  setTimeout(() => {
+    icon.className = 'bi bi-clipboard';
+    btn.classList.remove('copied');
+  }, 2000);
+}
+</script>
+{% endif %}
+{% endblock %}

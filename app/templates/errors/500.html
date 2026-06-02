@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}500 — Erro interno{% endblock %}
+
+{% block content %}
+<div class="error-page">
+  <div class="error-code text-danger">500</div>
+  <i class="bi bi-exclamation-triangle error-icon text-danger"></i>
+  <h3 class="fw-bold mt-3">Erro interno do servidor</h3>
+  <p class="text-muted">Algo deu errado no servidor.<br>
+  Tente novamente em alguns instantes.</p>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-gold mt-2">
+    <i class="bi bi-house me-1"></i>Voltar ao Dashboard
+  </a>
+</div>
+{% endblock %}
+
+{% block auth_content %}
+<div class="error-page error-page-full">
+  <div class="error-code text-danger">500</div>
+  <i class="bi bi-exclamation-triangle error-icon text-danger"></i>
+  <h3 class="fw-bold mt-3">Erro interno</h3>
+  <p class="text-muted">Tente novamente em alguns instantes.</p>
+  <a href="{{ url_for('auth.login') }}" class="btn btn-gold mt-2">Login</a>
+</div>
+{% endblock %}

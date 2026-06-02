@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block title %}Sorteios — Athos Barbearia{% endblock %}
+{% block page_title %}Sorteios{% endblock %}
+
+{% block content %}
+
+<!-- ── Cabeçalho ─────────────────────────────────────────────────────── -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-2 mb-4">
+  <div>
+    <h5 class="fw-bold mb-1">Histórico de Sorteios</h5>
+    <p class="text-muted small mb-0">
+      {{ raffles|length }} sorteio(s) registrado(s)
+    </p>
+  </div>
+  <a href="{{ url_for('raffle.new') }}" class="btn btn-gold fw-semibold">
+    <i class="bi bi-plus-circle me-2"></i>Novo sorteio
+  </a>
+</div>
+
+{% if raffles %}
+
+<!-- ── Grade de cards ────────────────────────────────────────────────── -->
+<div class="row g-3">
+  {% for r in raffles %}
+  <div class="col-md-6 col-xl-4">
+    <div class="raffle-card {% if r.status == 'drawn' %}raffle-drawn{% endif %} h-100">
+
+      <!-- Header do card -->
+      <div class="raffle-card-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="raffle-icon {% if r.status == 'drawn' %}raffle-icon-drawn{% endif %}">
+            <i class="bi bi-trophy"></i>
+          </div>
+          <div class="flex-grow-1 min-w-0">
+            <h6 class="fw-bold mb-0 text-truncate">{{ r.name }}</h6>
+            <span class="badge mt-1
+              {% if r.status == 'drawn' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+              {% if r.status == 'drawn' %}
+              <i class="bi bi-check-circle me-1"></i>Sorteado
+              {% else %}
+              <i class="bi bi-hourglass-split me-1"></i>Pendente
+              {% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Body do card -->
+      <div class="raffle-card-body">
+
+        <!-- Período -->
+        <div class="info-row">
+          <i class="bi bi-calendar-range text-accent"></i>
+          <span>{{ r.period_str }}</span>
+        </div>
+
+        <!-- Vencedores -->
+        <div class="info-row">
+          <i class="bi bi-people text-accent"></i>
+          {% if r.status == 'drawn' %}
+          <span>
+            <strong class="text-accent">{{ r.drawn_winners_count }}</strong>
+            vencedor(es) de
+            <strong>{{ r.pool_size or '—' }}</strong> elegíveis
+          </span>
+          {% else %}
+          <span>
+            <strong>{{ r.winner_count }}</strong> vencedor(es) a sortear
+          </span>
+          {% endif %}
+        </div>
+
+        <!-- Prêmio -->
+        {% if r.prize %}
+        <div class="info-row">
+          <i class="bi bi-gift text-accent"></i>
+          <span class="text-truncate">{{ r.prize }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Data do sorteio -->
+        {% if r.status == 'drawn' and r.drawn_at %}
+        <div class="info-row">
+          <i class="bi bi-clock-history text-muted"></i>
+          <span class="text-muted small">
+            Sorteado em {{ r.drawn_at.strftime('%d/%m/%Y às %H:%M') }}
+          </span>
+        </div>
+        {% else %}
+        <div class="info-row">
+          <i class="bi bi-calendar-plus text-muted"></i>
+          <span class="text-muted small">
+            Criado em {{ r.created_at.strftime('%d/%m/%Y') }}
+          </span>
+        </div>
+        {% endif %}
+
+        <!-- Vencedores (preview quando sorteado) -->
+        {% if r.status == 'drawn' %}
+        {% set ws = r.winners.order_by('position').limit(3).all() %}
+        {% if ws %}
+        <div class="winners-preview mt-2">
+          {% for w in ws %}
+          <div class="winner-preview-item">
+            <span class="medal medal-{{ w.medal_class }}">{{ w.position }}º</span>
+            <span class="small fw-semibold text-truncate">{{ w.customer_name }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endif %}
+
+      </div>
+
+      <!-- Footer do card -->
+      <div class="raffle-card-footer">
+        <a href="{{ url_for('raffle.detail', raffle_id=r.id) }}"
+           class="btn btn-sm {% if r.status == 'drawn' %}btn-gold{% else %}btn-outline-gold{% endif %} w-100 fw-semibold">
+          {% if r.status == 'drawn' %}
+          <i class="bi bi-eye me-1"></i>Ver resultado
+          {% else %}
+          <i class="bi bi-shuffle me-1"></i>Realizar sorteio
+          {% endif %}
+        </a>
+      </div>
+
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+
+<!-- ── Estado vazio ───────────────────────────────────────────────────── -->
+<div class="raffle-empty">
+  <div class="raffle-empty-icon">
+    <i class="bi bi-trophy"></i>
+  </div>
+  <h6 class="fw-bold mt-4 mb-2">Nenhum sorteio criado ainda</h6>
+  <p class="text-muted small mb-4">
+    Crie um sorteio definindo o período de atendimentos e o número de vencedores.
+    O sistema busca automaticamente os clientes elegíveis.
+  </p>
+  <a href="{{ url_for('raffle.new') }}" class="btn btn-gold px-4 fw-semibold">
+    <i class="bi bi-plus-circle me-2"></i>Criar primeiro sorteio
+  </a>
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Raffle card ─────────────────────────────────────────────────── */
+.raffle-card {
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.raffle-card:hover {
+  border-color: rgba(204,31,31,.35);
+}
+.raffle-card.raffle-drawn {
+  border-color: rgba(74,222,128,.15);
+}
+.raffle-card.raffle-drawn:hover {
+  border-color: rgba(74,222,128,.4);
+}
+
+.raffle-card-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--c-border);
+}
+.raffle-card-body {
+  padding: 16px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.raffle-card-footer {
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--c-border);
+}
+
+/* ── Raffle icon ─────────────────────────────────────────────────── */
+.raffle-icon {
+  width: 42px; height: 42px;
+  border-radius: 4px;
+  background: rgba(107,114,128,.12);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+.raffle-icon-drawn {
+  background: rgba(204,31,31,.15);
+  color: var(--c-white);
+}
+
+/* ── Info rows ───────────────────────────────────────────────────── */
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .82rem;
+  color: #d1d5db;
+}
+.info-row i { width: 14px; flex-shrink: 0; font-size: .85rem; }
+
+/* ── Winners preview ─────────────────────────────────────────────── */
+.winners-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(255,255,255,.03);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+.winner-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .8rem;
+  overflow: hidden;
+}
+
+/* ── Medals ──────────────────────────────────────────────────────── */
+.medal {
+  font-size: .65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.medal-gold   { background: rgba(204,31,31,.2); color: var(--c-white); }
+.medal-silver { background: rgba(192,192,192,.15); color: #c0c0c0; }
+.medal-bronze { background: rgba(205,127,50,.15); color: #cd7f32; }
+.medal-default { background: rgba(107,114,128,.15); color: #6b7280; }
+
+/* ── Empty state ─────────────────────────────────────────────────── */
+.raffle-empty {
+  text-align: center;
+  padding: 80px 20px;
+}
+.raffle-empty-icon {
+  width: 72px; height: 72px;
+  border-radius: 4px;
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem;
+  color: rgba(255,255,255,.08);
+  margin: 0 auto;
+}
+
+/* ── Min-width 0 for truncate inside flex ────────────────────────── */
+.min-w-0 { min-width: 0; }
+</style>
+{% endblock %}

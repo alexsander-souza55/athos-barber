@@ -1,0 +1,393 @@
+{% extends "base.html" %}
+{% block title %}Relatórios — Athos Barbearia{% endblock %}
+{% block page_title %}Relatórios{% endblock %}
+
+{% block content %}
+
+<!-- ── Cabeçalho ───────────────────────────────────────────────────────── -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-2 mb-4">
+  <div>
+    <h5 class="fw-bold mb-1">Central de Relatórios</h5>
+    <p class="text-muted small mb-0">
+      Exporte dados em Excel ou PDF com período personalizado.
+    </p>
+  </div>
+</div>
+
+<!-- ══ Seleção de período ══════════════════════════════════════════════ -->
+<div class="card card-dark mb-4">
+  <div class="card-header">
+    <h6 class="fw-bold mb-0">
+      <i class="bi bi-calendar-range text-accent me-2"></i>Período de exportação
+    </h6>
+  </div>
+  <div class="card-body p-4">
+
+    <!-- Período manual -->
+    <div class="row g-3 align-items-end mb-3">
+      <div class="col-sm-4 col-md-3">
+        <label class="form-label fw-semibold small">Data inicial</label>
+        <input type="date" id="sharedFrom"
+               value="{{ default_from }}"
+               class="form-control bg-dark border-secondary text-light" />
+      </div>
+      <div class="col-sm-4 col-md-3">
+        <label class="form-label fw-semibold small">Data final</label>
+        <input type="date" id="sharedTo"
+               value="{{ default_to }}"
+               class="form-control bg-dark border-secondary text-light" />
+      </div>
+      <div class="col-sm-4 col-md-6">
+        <div class="period-display" id="periodDisplay"></div>
+      </div>
+    </div>
+
+    <!-- Atalhos rápidos -->
+    <div class="d-flex flex-wrap gap-2">
+      <span class="text-muted small me-1 align-self-center">Atalhos:</span>
+      <button class="preset-btn" onclick="setPreset('week')">
+        <i class="bi bi-calendar-week me-1"></i>Esta semana
+      </button>
+      <button class="preset-btn" onclick="setPreset('month')">
+        <i class="bi bi-calendar me-1"></i>Este mês
+      </button>
+      <button class="preset-btn" onclick="setPreset('last_month')">
+        <i class="bi bi-calendar-minus me-1"></i>Mês anterior
+      </button>
+      <button class="preset-btn" onclick="setPreset('quarter')">
+        <i class="bi bi-calendar-range me-1"></i>Último trimestre
+      </button>
+      <button class="preset-btn" onclick="setPreset('year')">
+        <i class="bi bi-calendar-check me-1"></i>Este ano
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ Cards de relatórios ════════════════════════════════════════════ -->
+<div class="row g-3">
+
+  <!-- ── Agendamentos ───────────────────────────────────────────────── -->
+  <div class="col-md-6">
+    <div class="report-card">
+      <div class="report-card-icon" style="background:rgba(204,31,31,.12)">
+        <i class="bi bi-calendar-check text-accent"></i>
+      </div>
+      <div class="report-card-body">
+        <h6 class="fw-bold mb-1">Agendamentos</h6>
+        <p class="text-muted small mb-3">
+          Lista completa de todos os agendamentos no período com cliente,
+          barbeiro, serviço, valor e status.
+        </p>
+        <div class="report-columns mb-3">
+          {% for col in ["Data / Hora", "Cliente + Telefone", "Barbeiro", "Serviço", "Valor", "Status"] %}
+          <span class="col-badge">{{ col }}</span>
+          {% endfor %}
+        </div>
+        <div class="d-flex gap-2">
+          <a href="#" class="btn btn-success btn-sm fw-semibold export-btn"
+             data-report="appointments" data-fmt="xlsx">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+          </a>
+          <a href="#" class="btn btn-outline-danger btn-sm fw-semibold export-btn"
+             data-report="appointments" data-fmt="pdf">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Faturamento ────────────────────────────────────────────────── -->
+  <div class="col-md-6">
+    <div class="report-card">
+      <div class="report-card-icon" style="background:rgba(34,197,94,.12)">
+        <i class="bi bi-cash-coin" style="color:#4ade80"></i>
+      </div>
+      <div class="report-card-body">
+        <h6 class="fw-bold mb-1">Faturamento</h6>
+        <p class="text-muted small mb-3">
+          Receita diária agrupada por data — total de atendimentos,
+          concluídos, cancelados e faturamento de cada dia.
+        </p>
+        <div class="report-columns mb-3">
+          {% for col in ["Data", "Total agend.", "Concluídos", "Cancelados", "Não compareceu", "Faturamento"] %}
+          <span class="col-badge">{{ col }}</span>
+          {% endfor %}
+        </div>
+        <div class="d-flex gap-2">
+          <a href="#" class="btn btn-success btn-sm fw-semibold export-btn"
+             data-report="revenue" data-fmt="xlsx">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+          </a>
+          <a href="#" class="btn btn-outline-danger btn-sm fw-semibold export-btn"
+             data-report="revenue" data-fmt="pdf">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Serviços ───────────────────────────────────────────────────── -->
+  <div class="col-md-6">
+    <div class="report-card">
+      <div class="report-card-icon" style="background:rgba(168,85,247,.12)">
+        <i class="bi bi-stars" style="color:#a855f7"></i>
+      </div>
+      <div class="report-card-body">
+        <h6 class="fw-bold mb-1">Serviços</h6>
+        <p class="text-muted small mb-3">
+          Ranking dos serviços mais realizados — quantidade de atendimentos
+          concluídos, preço unitário e faturamento total por serviço.
+        </p>
+        <div class="report-columns mb-3">
+          {% for col in ["Serviço", "Duração", "Preço unit.", "Realizações", "Faturamento"] %}
+          <span class="col-badge">{{ col }}</span>
+          {% endfor %}
+        </div>
+        <div class="d-flex gap-2">
+          <a href="#" class="btn btn-success btn-sm fw-semibold export-btn"
+             data-report="services" data-fmt="xlsx">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+          </a>
+          <a href="#" class="btn btn-outline-danger btn-sm fw-semibold export-btn"
+             data-report="services" data-fmt="pdf">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Barbeiros ──────────────────────────────────────────────────── -->
+  <div class="col-md-6">
+    <div class="report-card">
+      <div class="report-card-icon" style="background:rgba(14,165,233,.12)">
+        <i class="bi bi-person-badge text-info"></i>
+      </div>
+      <div class="report-card-body">
+        <h6 class="fw-bold mb-1">Barbeiros</h6>
+        <p class="text-muted small mb-3">
+          Performance individual de cada barbeiro — atendimentos por status,
+          taxa de conclusão e faturamento gerado no período.
+        </p>
+        <div class="report-columns mb-3">
+          {% for col in ["Barbeiro", "Total", "Concluídos", "Cancelados", "Taxa conclusão", "Faturamento"] %}
+          <span class="col-badge">{{ col }}</span>
+          {% endfor %}
+        </div>
+        <div class="d-flex gap-2">
+          <a href="#" class="btn btn-success btn-sm fw-semibold export-btn"
+             data-report="barbers" data-fmt="xlsx">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+          </a>
+          <a href="#" class="btn btn-outline-danger btn-sm fw-semibold export-btn"
+             data-report="barbers" data-fmt="pdf">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Nota de rodapé ─────────────────────────────────────────────────── -->
+<div class="mt-4 text-muted" style="font-size:.75rem">
+  <i class="bi bi-info-circle me-1 text-accent"></i>
+  Os arquivos são gerados em tempo real e iniciados automaticamente para download.
+  Excel (.xlsx) abre diretamente no Microsoft Excel ou Google Sheets.
+  PDF é ideal para impressão e compartilhamento.
+</div>
+
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+/* ── Report card ──────────────────────────────────────────────────── */
+.report-card {
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 24px;
+  display: flex;
+  gap: 18px;
+  height: 100%;
+  transition: border-color var(--t-base);
+}
+.report-card:hover { border-color: #3e3e3e; }
+
+.report-card-icon {
+  width: 44px; height: 44px;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+.report-card-body { flex: 1; min-width: 0; }
+
+/* ── Column badges ────────────────────────────────────────────────── */
+.report-columns { display: flex; flex-wrap: wrap; gap: 5px; }
+.col-badge {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .62rem; font-weight: 700; letter-spacing: .06em;
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--c-border);
+  border-radius: 2px;
+  padding: 2px 7px;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+/* ── Preset buttons ───────────────────────────────────────────────── */
+.preset-btn {
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--c-border);
+  border-radius: 2px;
+  font-family: 'Josefin Sans', sans-serif;
+  color: var(--c-text-muted);
+  font-size: .72rem; font-weight: 700; letter-spacing: .04em;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+.preset-btn:hover {
+  background: var(--c-red-dim);
+  border-color: var(--c-red-border);
+  color: var(--c-text);
+}
+.preset-btn.active {
+  background: var(--c-red-dim);
+  border-color: var(--c-red-border);
+  color: var(--c-white);
+  font-weight: 700;
+}
+
+/* ── Period display ───────────────────────────────────────────────── */
+.period-display {
+  background: rgba(204,31,31,.06);
+  border: 1px solid rgba(204,31,31,.18);
+  border-radius: 2px;
+  padding: 8px 14px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .82rem;
+  color: var(--c-text-2);
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Export button loading state ──────────────────────────────────── */
+.export-btn.loading {
+  opacity: .7;
+  pointer-events: none;
+}
+</style>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+const sharedFrom   = document.getElementById('sharedFrom');
+const sharedTo     = document.getElementById('sharedTo');
+const periodDisplay = document.getElementById('periodDisplay');
+
+// ── Atualiza todos os botões de exportação ──────────────────────────────
+function buildExportUrl(report, fmt) {
+  const params = new URLSearchParams({
+    report,
+    fmt,
+    date_from: sharedFrom.value,
+    date_to:   sharedTo.value,
+  });
+  return `/reports/export?${params}`;
+}
+
+function refreshLinks() {
+  document.querySelectorAll('.export-btn').forEach(btn => {
+    btn.href = buildExportUrl(btn.dataset.report, btn.dataset.fmt);
+  });
+  updatePeriodDisplay();
+}
+
+// ── Exibe o período selecionado em formato legível ────────────────────────
+function updatePeriodDisplay() {
+  const s = sharedFrom.value;
+  const e = sharedTo.value;
+  if (!s || !e) { periodDisplay.textContent = ''; return; }
+
+  const start = new Date(s + 'T00:00:00');
+  const end   = new Date(e + 'T00:00:00');
+
+  if (start > end) {
+    periodDisplay.innerHTML =
+      '<i class="bi bi-exclamation-triangle text-warning me-2"></i>' +
+      '<span class="text-warning">Data inicial posterior à final.</span>';
+    return;
+  }
+
+  const days = Math.round((end - start) / 86400000) + 1;
+  const fmt  = d => d.toLocaleDateString('pt-BR');
+  periodDisplay.innerHTML =
+    `<i class="bi bi-calendar-check text-accent me-2"></i>` +
+    `${fmt(start)} a ${fmt(end)} — <strong>${days}</strong> dia(s)`;
+}
+
+// ── Presets de período ────────────────────────────────────────────────────
+function setPreset(preset) {
+  const today = new Date();
+  const iso   = d => d.toISOString().split('T')[0];
+  let from, to = today;
+
+  if (preset === 'week') {
+    // Domingo=0 → ajusta para semana começar na segunda
+    const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
+    from = new Date(today);
+    from.setDate(today.getDate() - dow);
+  } else if (preset === 'month') {
+    from = new Date(today.getFullYear(), today.getMonth(), 1);
+  } else if (preset === 'last_month') {
+    from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    to   = new Date(today.getFullYear(), today.getMonth(), 0);
+  } else if (preset === 'quarter') {
+    from = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+  } else if (preset === 'year') {
+    from = new Date(today.getFullYear(), 0, 1);
+  }
+
+  sharedFrom.value = iso(from);
+  sharedTo.value   = iso(to);
+
+  // Destaca o botão ativo
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  refreshLinks();
+}
+
+// ── Feedback visual ao clicar em exportar ────────────────────────────────
+document.querySelectorAll('.export-btn').forEach(btn => {
+  btn.addEventListener('click', function () {
+    const original = this.innerHTML;
+    this.classList.add('loading');
+    this.innerHTML =
+      '<span class="spinner-border spinner-border-sm me-1"></span>Gerando...';
+    setTimeout(() => {
+      this.classList.remove('loading');
+      this.innerHTML = original;
+    }, 3500);
+  });
+});
+
+// ── Listeners ─────────────────────────────────────────────────────────────
+sharedFrom.addEventListener('change', refreshLinks);
+sharedTo.addEventListener('change', refreshLinks);
+
+// Inicializa
+refreshLinks();
+</script>
+{% endblock %}

@@ -1,0 +1,157 @@
+{% extends "base_public.html" %}
+{% block title %}Agendamento Confirmado{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-xl-5 col-lg-6 col-md-8">
+
+    <div class="text-center mb-4 success-header">
+      <div class="success-check mx-auto mb-3">
+        <i class="bi bi-check-lg"></i>
+      </div>
+      <div class="success-badge mb-3">Agendado</div>
+      <h5 class="success-title mb-1">Seu horário está confirmado</h5>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:.78rem;letter-spacing:.06em;color:var(--c-text-muted)">
+        Anote os detalhes abaixo e apareça no horário combinado.
+      </p>
+    </div>
+
+    <div class="card card-dark mb-4">
+      <div class="card-header" style="padding:12px 20px">
+        <span style="font-family:'Josefin Sans',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--c-text-muted)">
+          <i class="bi bi-receipt me-2"></i>Detalhes do agendamento
+        </span>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+
+          <li class="list-group-item bg-transparent py-3 px-4" style="border-color:var(--c-border)">
+            <div class="row align-items-center">
+              <div class="col-4" style="font-family:'Josefin Sans',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-text-muted)">
+                <i class="bi bi-person me-1"></i>Cliente
+              </div>
+              <div class="col-8" style="font-family:'Josefin Sans',sans-serif;font-size:.9rem;color:var(--c-text)">
+                {{ appt.customer.name if appt.customer else '—' }}
+              </div>
+            </div>
+          </li>
+
+          <li class="list-group-item bg-transparent py-3 px-4" style="border-color:var(--c-border)">
+            <div class="row align-items-center">
+              <div class="col-4" style="font-family:'Josefin Sans',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-text-muted)">
+                <i class="bi bi-scissors me-1"></i>Serviço
+              </div>
+              <div class="col-8">
+                <span style="font-family:'Josefin Sans',sans-serif;font-size:.9rem;color:var(--c-text)">{{ appt.service.name if appt.service else '—' }}</span>
+                {% if appt.service %}
+                <span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--c-text-2);margin-left:.5rem">{{ appt.service.price_formatted }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </li>
+
+          <li class="list-group-item bg-transparent py-3 px-4" style="border-color:var(--c-border)">
+            <div class="row align-items-center">
+              <div class="col-4" style="font-family:'Josefin Sans',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-text-muted)">
+                <i class="bi bi-person-badge me-1"></i>Barbeiro
+              </div>
+              <div class="col-8" style="font-family:'Josefin Sans',sans-serif;font-size:.9rem;color:var(--c-text)">
+                {{ appt.barber.name if appt.barber else '—' }}
+              </div>
+            </div>
+          </li>
+
+          <li class="list-group-item bg-transparent py-3 px-4" style="border-color:var(--c-border)">
+            <div class="row align-items-center">
+              <div class="col-4" style="font-family:'Josefin Sans',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-text-muted)">
+                <i class="bi bi-calendar me-1"></i>Data
+              </div>
+              <div class="col-8" style="font-family:'JetBrains Mono',monospace;font-size:.9rem;color:var(--c-text)">
+                {{ appt.scheduled_date.strftime('%d/%m/%Y') }}
+              </div>
+            </div>
+          </li>
+
+          <li class="list-group-item bg-transparent py-3 px-4" style="border-color:var(--c-border)">
+            <div class="row align-items-center">
+              <div class="col-4" style="font-family:'Josefin Sans',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-text-muted)">
+                <i class="bi bi-clock me-1"></i>Horário
+              </div>
+              <div class="col-8">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;color:var(--c-text)">{{ appt.scheduled_time.strftime('%H:%M') }}</span>
+                {% if appt.end_time_str %}
+                <span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--c-text-muted);margin-left:.4rem">→ {{ appt.end_time_str }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </li>
+
+          {% if appt.notes %}
+          <li class="list-group-item bg-transparent py-3 px-4" style="border-color:var(--c-border)">
+            <div class="row">
+              <div class="col-4" style="font-family:'Josefin Sans',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-text-muted)">
+                <i class="bi bi-chat-left me-1"></i>Obs.
+              </div>
+              <div class="col-8" style="font-family:'Josefin Sans',sans-serif;font-size:.82rem;color:var(--c-text-2)">{{ appt.notes }}</div>
+            </div>
+          </li>
+          {% endif %}
+
+        </ul>
+      </div>
+    </div>
+
+    <div class="alert alert-warning d-flex gap-2 align-items-start py-2 px-3 mb-4" style="font-size:.78rem">
+      <i class="bi bi-exclamation-triangle mt-1 flex-shrink-0"></i>
+      <div>Chegue com alguns minutos de antecedência. Caso precise cancelar, entre em contato com a barbearia.</div>
+    </div>
+
+    <div class="d-flex gap-2 justify-content-center">
+      <a href="{{ url_for('appointments.book') }}" class="btn btn-gold px-5">
+        <i class="bi bi-plus me-2"></i>Novo agendamento
+      </a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.success-header { animation: fadeInDown .5s ease both; }
+@keyframes fadeInDown {
+  from { opacity:0; transform:translateY(-16px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.success-check {
+  width: 72px; height: 72px;
+  background: rgba(46,125,79,.1);
+  border: 1px solid rgba(46,125,79,.3);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.2rem; color: #5db882;
+}
+
+.success-badge {
+  display: inline-block;
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem; font-weight: 700;
+  letter-spacing: .05em;
+  color: var(--c-text);
+  border-bottom: 2px solid var(--c-red);
+  padding-bottom: 4px;
+  animation: popIn .4s cubic-bezier(.175,.885,.32,1.275) .15s both;
+}
+@keyframes popIn {
+  from { opacity:0; transform:scale(.75); }
+  to   { opacity:1; transform:scale(1); }
+}
+
+.success-title {
+  font-family: 'Josefin Sans', sans-serif;
+  font-weight: 600; font-size: .95rem;
+  letter-spacing: .06em; color: var(--c-text);
+}
+</style>
+{% endblock %}

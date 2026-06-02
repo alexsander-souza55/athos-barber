@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}Novo Sorteio — Athos Barbearia{% endblock %}
+{% block page_title %}Novo Sorteio{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-xl-6 col-lg-7 col-md-9">
+
+    <!-- Breadcrumb -->
+    <nav class="mb-3" aria-label="breadcrumb">
+      <ol class="breadcrumb breadcrumb-dark small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('raffle.index') }}" class="text-accent">Sorteios</a>
+        </li>
+        <li class="breadcrumb-item active">Novo</li>
+      </ol>
+    </nav>
+
+    <form method="POST" novalidate id="raffleForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <!-- ═ Identificação ════════════════════════════════ -->
+      <div class="card card-dark mb-4">
+        <div class="card-header">
+          <h6 class="fw-bold mb-0">
+            <i class="bi bi-trophy text-accent me-2"></i>Identificação
+          </h6>
+        </div>
+        <div class="card-body p-4">
+          <div class="row g-3">
+
+            <!-- Nome -->
+            <div class="col-12">
+              <label class="form-label fw-semibold small">
+                Nome do sorteio <span class="text-danger">*</span>
+              </label>
+              <input type="text" name="name"
+                     value="{{ form_data.get('name', '') }}"
+                     class="form-control bg-dark border-secondary text-light
+                            {% if errors.get('name') %}is-invalid{% endif %}"
+                     placeholder="Ex: Sorteio Mês de Maio"
+                     maxlength="150" required />
+              {% if errors.get('name') %}
+              <div class="invalid-feedback">{{ errors.name }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Prêmio -->
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Prêmio</label>
+              <input type="text" name="prize"
+                     value="{{ form_data.get('prize', '') }}"
+                     class="form-control bg-dark border-secondary text-light"
+                     placeholder="Ex: Corte grátis, Vale-presente de R$ 100..."
+                     maxlength="200" />
+              <div class="form-text">Opcional — aparece no card do sorteio.</div>
+            </div>
+
+            <!-- Descrição -->
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Descrição</label>
+              <textarea name="description" rows="2"
+                        class="form-control bg-dark border-secondary text-light"
+                        placeholder="Regras, observações...">{{ form_data.get('description', '') }}</textarea>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ═ Período de elegibilidade ════════════════════ -->
+      <div class="card card-dark mb-4">
+        <div class="card-header">
+          <h6 class="fw-bold mb-0">
+            <i class="bi bi-calendar-range text-accent me-2"></i>Período de atendimentos
+          </h6>
+        </div>
+        <div class="card-body p-4">
+          <p class="text-muted small mb-3">
+            O sistema buscará automaticamente todos os clientes que tiveram
+            atendimentos <strong>concluídos</strong> nesse intervalo.
+            Cada cliente é contado apenas uma vez, independente da quantidade de visitas.
+          </p>
+          <div class="row g-3">
+
+            <!-- Data inicial -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                Data inicial <span class="text-danger">*</span>
+              </label>
+              <input type="date" name="start_date"
+                     value="{{ form_data.get('start_date', '') }}"
+                     class="form-control bg-dark border-secondary text-light
+                            {% if errors.get('start_date') %}is-invalid{% endif %}"
+                     id="startDate" required />
+              {% if errors.get('start_date') %}
+              <div class="invalid-feedback">{{ errors.start_date }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Data final -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                Data final <span class="text-danger">*</span>
+              </label>
+              <input type="date" name="end_date"
+                     value="{{ form_data.get('end_date', '') }}"
+                     class="form-control bg-dark border-secondary text-light
+                            {% if errors.get('end_date') %}is-invalid{% endif %}"
+                     id="endDate" required />
+              {% if errors.get('end_date') %}
+              <div class="invalid-feedback">{{ errors.end_date }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Preview do intervalo -->
+            <div class="col-12">
+              <div id="periodPreview" class="period-preview" style="display:none">
+                <i class="bi bi-info-circle text-accent me-2"></i>
+                <span id="periodText"></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ═ Configuração do sorteio ══════════════════════ -->
+      <div class="card card-dark mb-4">
+        <div class="card-header">
+          <h6 class="fw-bold mb-0">
+            <i class="bi bi-shuffle text-accent me-2"></i>Configuração
+          </h6>
+        </div>
+        <div class="card-body p-4">
+          <div class="row g-3 align-items-center">
+
+            <div class="col-md-5">
+              <label class="form-label fw-semibold small">
+                Quantidade de vencedores <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary text-accent">
+                  <i class="bi bi-people"></i>
+                </span>
+                <input type="number" name="winner_count"
+                       value="{{ form_data.get('winner_count', '1') }}"
+                       class="form-control bg-dark border-secondary text-light
+                              {% if errors.get('winner_count') %}is-invalid{% endif %}"
+                       min="1" max="50" required />
+                {% if errors.get('winner_count') %}
+                <div class="invalid-feedback">{{ errors.winner_count }}</div>
+                {% endif %}
+              </div>
+              <div class="form-text">Entre 1 e 50 vencedores.</div>
+            </div>
+
+            <div class="col-md-7">
+              <div class="winner-info-box">
+                <i class="bi bi-lightbulb text-accent me-2 fs-5"></i>
+                <div>
+                  <div class="small fw-semibold">Como funciona</div>
+                  <div class="text-muted" style="font-size:.75rem">
+                    O sorteio usa seleção aleatória sem repetição.
+                    Se o pool tiver menos participantes que o número solicitado,
+                    todos são sorteados.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ═ Ações ════════════════════════════════════════ -->
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-gold px-4 fw-bold">
+          <i class="bi bi-plus-circle me-2"></i>Criar sorteio
+        </button>
+        <a href="{{ url_for('raffle.index') }}" class="btn btn-outline-secondary">
+          Cancelar
+        </a>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.breadcrumb-dark .breadcrumb-item.active { color: #6b7280; }
+.breadcrumb-dark .breadcrumb-item + .breadcrumb-item::before { color: #4b5563; }
+
+.period-preview {
+  display: flex;
+  align-items: center;
+  background: rgba(204,31,31,.07);
+  border: 1px solid rgba(204,31,31,.2);
+  border-radius: 4px;
+  padding: 10px 14px;
+  font-size: .82rem;
+  color: #d1d5db;
+}
+
+.winner-info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(255,255,255,.03);
+  border-radius: 4px;
+  border: 1px solid var(--c-border);
+  padding: 14px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const startDate = document.getElementById('startDate');
+const endDate   = document.getElementById('endDate');
+const preview   = document.getElementById('periodPreview');
+const previewTxt = document.getElementById('periodText');
+
+function updatePreview() {
+  const s = startDate.value;
+  const e = endDate.value;
+  if (!s || !e) { preview.style.display = 'none'; return; }
+
+  const start = new Date(s + 'T00:00:00');
+  const end   = new Date(e + 'T00:00:00');
+  if (start > end) { preview.style.display = 'none'; return; }
+
+  const days = Math.round((end - start) / 86400000) + 1;
+  const fmt  = d => d.toLocaleDateString('pt-BR');
+  previewTxt.textContent =
+    `Período de ${fmt(start)} a ${fmt(end)} — ${days} dia(s)`;
+  preview.style.display = 'flex';
+}
+
+[startDate, endDate].forEach(el => el.addEventListener('change', updatePreview));
+updatePreview();
+</script>
+{% endblock %}

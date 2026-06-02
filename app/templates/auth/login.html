@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+{% block title %}Entrar — Athos Barbearia{% endblock %}
+
+{% block auth_content %}
+<div class="login-page">
+
+  <div class="login-left d-none d-lg-flex">
+    <div class="login-left-inner">
+      <img src="{{ url_for('static', filename='img/athos_logo.png') }}" alt="Athos" class="login-logo-large" />
+      <div class="login-left-tagline">
+        <span class="login-left-sub">Sistema de Gestão</span>
+        <h2 class="login-left-title">Athos<br>Barbearia</h2>
+        <div class="login-left-rule"></div>
+        <p class="login-left-quote">Arte. Precisão. Tradição.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="login-right">
+    <div class="login-card">
+
+      <div class="login-brand">
+        <img src="{{ url_for('static', filename='img/athos_logo.png') }}" alt="Athos" class="login-brand-img" />
+        <div>
+          <div class="login-brand-name">Athos</div>
+          <div class="login-brand-sub">Barbearia &nbsp;·&nbsp; Área Restrita</div>
+        </div>
+      </div>
+
+      <div class="login-deco">
+        <span></span><span class="login-deco-text">Acesso ao Sistema</span><span></span>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          {% set bs_cat = "danger" if category in ("error","danger") else category %}
+          <div class="alert alert-{{ bs_cat }} d-flex align-items-center gap-2 py-2 mb-3">
+            <i class="bi bi-{% if bs_cat == 'success' %}check-circle{% elif bs_cat == 'danger' %}x-circle{% elif bs_cat == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} flex-shrink-0"></i>
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      {% if lock_info %}
+      <div class="lock-banner">
+        <i class="bi bi-shield-lock me-2"></i>
+        Conta bloqueada por <strong>{{ lock_info.minutes }} min</strong> — muitas tentativas incorretas.
+      </div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('auth.login') }}" novalidate id="loginForm">
+        {{ form.hidden_tag() }}
+
+        <div class="mb-3">
+          <label class="form-label">{{ form.username.label.text }}</label>
+          {{ form.username(
+              class="form-control form-control-lg" + (" is-invalid" if form.username.errors else ""),
+              placeholder="usuário",
+              autocomplete="username",
+              autofocus=true
+          ) }}
+          {% for e in form.username.errors %}
+            <div class="invalid-feedback">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label">{{ form.password.label.text }}</label>
+          <div class="input-group">
+            {{ form.password(
+                class="form-control form-control-lg" + (" is-invalid" if form.password.errors else ""),
+                placeholder="••••••••",
+                autocomplete="current-password",
+                id="loginPassword"
+            ) }}
+            <button class="btn btn-secondary" type="button" id="togglePwd" tabindex="-1"
+                    style="border-radius:0 4px 4px 0!important">
+              <i class="bi bi-eye" id="togglePwdIcon"></i>
+            </button>
+            {% for e in form.password.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between mb-4">
+          <div class="form-check">
+            {{ form.remember_me(class="form-check-input") }}
+            <label class="form-check-label" style="font-family:'Josefin Sans',sans-serif;font-size:.78rem;color:var(--c-text-muted);letter-spacing:.04em"
+                   for="{{ form.remember_me.id }}">
+              {{ form.remember_me.label.text }}
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-gold btn-lg w-100" id="loginBtn">
+          <span id="loginBtnText">Entrar</span>
+          <span id="loginBtnSpinner" class="d-none">
+            <span class="spinner-border spinner-border-sm me-2"></span>Autenticando...
+          </span>
+        </button>
+      </form>
+
+      <p class="login-footer-note">
+        <i class="bi bi-lock me-1"></i>Acesso restrito a usuários autorizados
+      </p>
+    </div>
+
+    <div class="login-page-credit">
+      Desenvolvido por <span>Prospect+</span>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Login layout ── */
+.login-page {
+  min-height: 100vh;
+  background: var(--c-bg);
+  display: flex;
+}
+
+/* Left panel */
+.login-left {
+  width: 420px; flex-shrink: 0;
+  background: #080808;
+  border-right: 1px solid var(--c-border);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 48px;
+  position: relative;
+}
+.login-left::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 1px; background: var(--c-red);
+}
+.login-left-inner {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 40px;
+}
+.login-logo-large {
+  width: 90px; height: 90px; object-fit: contain;
+  opacity: .9;
+}
+.login-left-tagline { text-align: center; }
+.login-left-sub {
+  display: block;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .6rem; font-weight: 700;
+  letter-spacing: .22em; text-transform: uppercase;
+  color: var(--c-text-muted); margin-bottom: 10px;
+}
+.login-left-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.6rem; font-weight: 700;
+  line-height: 1.1; color: var(--c-text);
+  margin: 0 0 18px;
+}
+.login-left-rule {
+  width: 40px; height: 1px;
+  background: var(--c-red);
+  margin: 0 auto 16px;
+}
+.login-left-quote {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .72rem; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--c-text-muted);
+  margin: 0;
+}
+
+/* Right panel */
+.login-right {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 48px 24px;
+  background: var(--c-bg);
+}
+
+.login-card {
+  width: 100%; max-width: 380px;
+}
+
+/* Brand inside card */
+.login-brand {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 28px;
+}
+.login-brand-img { width: 40px; height: 40px; object-fit: contain; }
+.login-brand-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem; font-weight: 700;
+  color: var(--c-text); line-height: 1;
+}
+.login-brand-sub {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .58rem; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--c-text-muted);
+  margin-top: 4px;
+}
+
+/* Art-deco divider */
+.login-deco {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 24px;
+}
+.login-deco span:not(.login-deco-text) {
+  flex: 1; height: 1px; background: var(--c-border);
+}
+.login-deco-text {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .58rem; font-weight: 700;
+  letter-spacing: .18em; text-transform: uppercase;
+  color: var(--c-text-muted); white-space: nowrap;
+}
+
+/* Lock banner */
+.lock-banner {
+  background: rgba(204,31,31,.07);
+  border: 1px solid rgba(204,31,31,.25);
+  border-radius: 4px;
+  padding: 10px 14px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .82rem; margin-bottom: 16px;
+  color: var(--c-text-2);
+}
+
+.login-footer-note {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .65rem; letter-spacing: .1em;
+  color: var(--c-text-muted); text-align: center;
+  margin-top: 20px; margin-bottom: 0;
+}
+
+.login-page-credit {
+  margin-top: 32px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .58rem; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--c-text-muted);
+}
+.login-page-credit span { color: var(--c-text-2); }
+
+/* Form check */
+.form-check-input {
+  background-color: #1a1a1a;
+  border-color: var(--c-border);
+  border-radius: 2px;
+}
+.form-check-input:checked {
+  background-color: var(--c-white);
+  border-color: var(--c-white);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById("togglePwd").addEventListener("click", function() {
+  const input = document.getElementById("loginPassword");
+  const icon  = document.getElementById("togglePwdIcon");
+  const show  = input.type === "password";
+  input.type  = show ? "text" : "password";
+  icon.className = show ? "bi bi-eye-slash" : "bi bi-eye";
+});
+
+document.getElementById("loginForm").addEventListener("submit", function() {
+  document.getElementById("loginBtnText").classList.add("d-none");
+  document.getElementById("loginBtnSpinner").classList.remove("d-none");
+  document.getElementById("loginBtn").disabled = true;
+});
+</script>
+{% endblock %}

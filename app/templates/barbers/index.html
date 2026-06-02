@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block title %}Barbeiros — Athos Barbearia{% endblock %}
+{% block page_title %}Barbeiros{% endblock %}
+
+{% block content %}
+
+<!-- ── Cabeçalho ──────────────────────────────────────── -->
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mt-2 mb-4">
+  <div>
+    <h5 class="fw-bold mb-1">Equipe de Barbeiros</h5>
+    <div class="d-flex gap-3 text-muted small">
+      <span><i class="bi bi-people me-1 text-accent"></i>{{ summary.total }} total</span>
+      <span><i class="bi bi-check-circle me-1 text-success"></i>{{ summary.active }} ativos</span>
+      <span><i class="bi bi-calendar-check me-1 text-info"></i>{{ summary.today_total }} hoje</span>
+    </div>
+  </div>
+  <a href="{{ url_for('barbers.new') }}" class="btn btn-gold">
+    <i class="bi bi-person-plus me-2"></i>Novo barbeiro
+  </a>
+</div>
+
+<!-- ── Filtros ─────────────────────────────────────────── -->
+<form method="GET" class="row g-2 mb-4">
+  <div class="col-sm-6 col-md-4">
+    <div class="input-group input-group-sm">
+      <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-search"></i></span>
+      <input type="search" name="q" class="form-control form-control-sm bg-dark border-secondary text-light"
+             placeholder="Buscar por nome ou especialidade..." value="{{ q }}" />
+    </div>
+  </div>
+  <div class="col-auto">
+    <select name="status" class="form-select form-select-sm bg-dark border-secondary text-light"
+            onchange="this.form.submit()">
+      <option value="" {% if not status %}selected{% endif %}>Todos os status</option>
+      <option value="active"   {% if status == 'active'   %}selected{% endif %}>Somente ativos</option>
+      <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Somente inativos</option>
+    </select>
+  </div>
+  <div class="col-auto d-flex gap-1">
+    <button type="submit" class="btn btn-sm btn-outline-gold">Filtrar</button>
+    {% if q or status %}
+    <a href="{{ url_for('barbers.index') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+    {% endif %}
+  </div>
+</form>
+
+<!-- ── Cards ──────────────────────────────────────────── -->
+{% if barbers %}
+<div class="row g-4">
+  {% for barber in barbers %}
+  <div class="col-sm-6 col-lg-4 col-xl-3">
+    <div class="card card-dark barber-card h-100 {% if not barber.is_active %}barber-inactive{% endif %}">
+
+      <!-- Status badge -->
+      <div class="position-absolute top-0 end-0 m-2">
+        <span class="badge {% if barber.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+          <i class="bi bi-dot me-1" style="font-size:.7rem;line-height:0"></i>
+          {% if barber.is_active %}Ativo{% else %}Inativo{% endif %}
+        </span>
+      </div>
+
+      <!-- Foto / Avatar -->
+      <div class="card-body text-center pt-4 pb-2">
+        {% if barber.photo_url %}
+          <img src="{{ barber.photo_url }}" alt="{{ barber.name }}"
+               class="barber-photo mb-3" />
+        {% else %}
+          <div class="barber-avatar mx-auto mb-3">{{ barber.initials }}</div>
+        {% endif %}
+
+        <!-- Nome e especialidade -->
+        <h6 class="fw-bold mb-0 lh-sm">{{ barber.name }}</h6>
+        <p class="text-muted small mb-2">{{ barber.specialty or '—' }}</p>
+
+        <!-- Horário -->
+        <div class="work-hours mb-3">
+          <i class="bi bi-clock me-1 text-accent"></i>
+          <span class="small">{{ barber.work_hours_str }}</span>
+        </div>
+
+        <!-- Telefone -->
+        {% if barber.phone %}
+        <p class="text-muted small mb-2">
+          <i class="bi bi-telephone me-1"></i>{{ barber.phone }}
+        </p>
+        {% endif %}
+      </div>
+
+      <!-- Stats -->
+      <div class="barber-stats">
+        <div class="stat-item">
+          <div class="stat-num text-accent">{{ barber.total_appointments }}</div>
+          <div class="stat-lbl">Agend.</div>
+        </div>
+        <div class="stat-item border-start border-secondary">
+          <div class="stat-num text-success">{{ barber.completed_appointments }}</div>
+          <div class="stat-lbl">Concluídos</div>
+        </div>
+        <div class="stat-item border-start border-secondary">
+          <div class="stat-num text-info">{{ barber.appointments_today() }}</div>
+          <div class="stat-lbl">Hoje</div>
+        </div>
+      </div>
+
+      <!-- Ações -->
+      <div class="card-footer border-secondary d-flex gap-2 pt-2">
+        <!-- Ver detalhes -->
+        <a href="{{ url_for('barbers.detail', barber_id=barber.id) }}"
+           class="btn btn-sm btn-outline-gold flex-fill" title="Ver detalhes">
+          <i class="bi bi-eye me-1"></i>Ver
+        </a>
+        <!-- Editar -->
+        <a href="{{ url_for('barbers.edit', barber_id=barber.id) }}"
+           class="btn btn-sm btn-outline-light" title="Editar">
+          <i class="bi bi-pencil"></i>
+        </a>
+        <!-- Ativar / Desativar -->
+        <form method="POST" action="{{ url_for('barbers.toggle', barber_id=barber.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit"
+                  class="btn btn-sm {% if barber.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+                  title="{% if barber.is_active %}Desativar{% else %}Ativar{% endif %}">
+            <i class="bi bi-{% if barber.is_active %}pause{% else %}play{% endif %}"></i>
+          </button>
+        </form>
+        <!-- Excluir -->
+        <button type="button" class="btn btn-sm btn-outline-danger"
+                data-bs-toggle="modal" data-bs-target="#delModal{{ barber.id }}"
+                title="Excluir">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmação de exclusão (um por barbeiro) -->
+  <div class="modal fade" id="delModal{{ barber.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark border border-danger border-opacity-50">
+        <div class="modal-header border-danger border-opacity-25">
+          <h6 class="modal-title text-danger fw-bold">
+            <i class="bi bi-exclamation-triangle me-2"></i>Confirmar exclusão
+          </h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">Deseja excluir o barbeiro <strong class="text-white">{{ barber.name }}</strong>?</p>
+          <ul class="text-muted small mb-0">
+            <li>A conta de acesso ao sistema será removida</li>
+            <li>Esta ação <strong class="text-danger">não pode ser desfeita</strong></li>
+            {% if barber.total_appointments > 0 %}
+            <li class="text-warning">
+              <i class="bi bi-exclamation-circle me-1"></i>
+              Possui {{ barber.total_appointments }} agendamento(s) — <strong>exclusão bloqueada</strong>
+            </li>
+            {% endif %}
+          </ul>
+        </div>
+        <div class="modal-footer border-danger border-opacity-25">
+          <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <form method="POST" action="{{ url_for('barbers.delete', barber_id=barber.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-danger btn-sm"
+                    {% if barber.total_appointments > 0 %}disabled{% endif %}>
+              <i class="bi bi-trash me-1"></i>Excluir mesmo assim
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% endfor %}
+</div>
+
+{% else %}
+<!-- Estado vazio -->
+<div class="empty-state">
+  <div class="empty-icon"><i class="bi bi-person-badge"></i></div>
+  <h6 class="fw-bold mb-1">
+    {% if q or status %}Nenhum barbeiro encontrado{% else %}Nenhum barbeiro cadastrado{% endif %}
+  </h6>
+  <p class="text-muted small mb-3">
+    {% if q or status %}
+      Tente ajustar os filtros de busca.
+    {% else %}
+      Adicione o primeiro barbeiro da equipe.
+    {% endif %}
+  </p>
+  {% if not q and not status %}
+  <a href="{{ url_for('barbers.new') }}" class="btn btn-gold btn-sm">
+    <i class="bi bi-plus-circle me-1"></i>Cadastrar barbeiro
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Cards */
+.barber-card { border-radius: 4px; position: relative; transition: border-color var(--t-base); }
+.barber-inactive { opacity: .5; }
+.barber-inactive:hover { opacity: .75; }
+
+/* Foto e avatar */
+.barber-photo {
+  width: 84px; height: 84px; border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid var(--c-border);
+}
+.barber-avatar {
+  width: 84px; height: 84px; border-radius: 4px;
+  background: #1a1a1a; border: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem; font-weight: 700; color: var(--c-text-2);
+}
+
+/* Horário */
+.work-hours {
+  background: rgba(204,31,31,.07);
+  border: 1px solid rgba(204,31,31,.2);
+  border-radius: 2px;
+  padding: 3px 10px;
+  display: inline-block;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .68rem; letter-spacing: .06em;
+}
+
+/* Stats strip */
+.barber-stats {
+  display: flex;
+  padding: 12px 0;
+  margin: 0 16px;
+  border-top: 1px solid var(--c-border);
+}
+.stat-item { flex: 1; text-align: center; }
+.stat-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.25rem; font-weight: 700; line-height: 1;
+}
+.stat-lbl {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .6rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--c-text-muted); margin-top: 3px;
+}
+
+/* Badges */
+.badge-active   { background: rgba(46,125,79,.12); color: #5db882; border: 1px solid rgba(46,125,79,.3); }
+.badge-inactive { background: rgba(85,85,80,.1);   color: #555550; border: 1px solid rgba(85,85,80,.3); }
+</style>
+{% endblock %}
