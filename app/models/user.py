@@ -24,7 +24,13 @@ class User(UserMixin, db.Model):
     failed_attempts = db.Column(db.Integer, default=0, nullable=False)
     locked_until = db.Column(db.DateTime, nullable=True)
 
-    barber_profile = db.relationship("Barber", backref="user", uselist=False, lazy=True)
+    barber_profile = db.relationship(
+        "Barber",
+        backref="user",
+        cascade="all, delete-orphan",
+        uselist=False,
+        lazy=True,
+    )
 
     # ── Senha ──────────────────────────────────────────
     def set_password(self, password: str) -> None:

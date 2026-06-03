@@ -126,7 +126,7 @@ def seed_subscription_plans():
 
 @app.cli.command("seed-admin")
 def seed_admin():
-    """Recria o usuário admin (e opcionalmente um barber de exemplo)."""
+    """Recria o usuário admin de desenvolvimento."""
     with app.app_context():
         from app.models.user import User
 
@@ -138,6 +138,27 @@ def seed_admin():
             db.session.add(admin)
             db.session.commit()
             print("Admin criado: admin / admin123")
+
+
+@app.cli.command("seed-prospect")
+def seed_prospect():
+    """Cria o usuário fixo da Prospect (idempotente)."""
+    with app.app_context():
+        from app.models.user import User
+
+        if User.query.filter_by(username="prospect").first():
+            print("Usuário 'prospect' já existe.")
+            return
+
+        prospect = User(
+            username="prospect",
+            email="administrativo@theprospect.com.br",
+            role="admin",
+        )
+        prospect.set_password("Pro270326!")
+        db.session.add(prospect)
+        db.session.commit()
+        print("Usuário criado: prospect / Pro270326!")
 
 
 @app.cli.command("seed-kits")
