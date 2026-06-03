@@ -62,16 +62,18 @@ def _register_blueprints(app: Flask) -> None:
     from app.raffle.routes import raffle_bp
     from app.reports.routes import reports_bp
     from app.client.routes import client_bp
+    from app.subscriptions.routes import subscriptions_bp
 
-    app.register_blueprint(auth_bp,         url_prefix="/auth")
-    app.register_blueprint(dashboard_bp,    url_prefix="/")
-    app.register_blueprint(barbers_bp,      url_prefix="/barbers")
-    app.register_blueprint(customers_bp,    url_prefix="/customers")
-    app.register_blueprint(services_bp,     url_prefix="/services")
-    app.register_blueprint(appointments_bp, url_prefix="/appointments")
-    app.register_blueprint(raffle_bp,       url_prefix="/raffle")
-    app.register_blueprint(reports_bp,      url_prefix="/reports")
-    app.register_blueprint(client_bp,       url_prefix="/client")
+    app.register_blueprint(auth_bp,           url_prefix="/auth")
+    app.register_blueprint(dashboard_bp,      url_prefix="/")
+    app.register_blueprint(barbers_bp,        url_prefix="/barbers")
+    app.register_blueprint(customers_bp,      url_prefix="/customers")
+    app.register_blueprint(services_bp,       url_prefix="/services")
+    app.register_blueprint(appointments_bp,   url_prefix="/appointments")
+    app.register_blueprint(raffle_bp,         url_prefix="/raffle")
+    app.register_blueprint(reports_bp,        url_prefix="/reports")
+    app.register_blueprint(client_bp,         url_prefix="/client")
+    app.register_blueprint(subscriptions_bp,  url_prefix="/subscriptions")
 
 
 def _configure_login_manager() -> None:
@@ -175,7 +177,13 @@ def _ensure_schema(app: Flask) -> None:
 
 
 def _register_shell_context(app: Flask) -> None:
-    from app.models import User, Barber, Customer, Service, Appointment, Raffle
+    from app.models import (
+        User, Barber, Customer, Service, Appointment, Raffle,
+        ServiceKit, ServiceKitItem,
+        SubscriptionPlan, SubscriptionPlanCredit,
+        CustomerSubscription, SubscriptionCreditBalance, SubscriptionCreditUsage,
+        BarberScheduleException,
+    )
 
     @app.shell_context_processor
     def make_shell_context():
@@ -187,4 +195,12 @@ def _register_shell_context(app: Flask) -> None:
             "Service": Service,
             "Appointment": Appointment,
             "Raffle": Raffle,
+            "ServiceKit": ServiceKit,
+            "ServiceKitItem": ServiceKitItem,
+            "SubscriptionPlan": SubscriptionPlan,
+            "SubscriptionPlanCredit": SubscriptionPlanCredit,
+            "CustomerSubscription": CustomerSubscription,
+            "SubscriptionCreditBalance": SubscriptionCreditBalance,
+            "SubscriptionCreditUsage": SubscriptionCreditUsage,
+            "BarberScheduleException": BarberScheduleException,
         }

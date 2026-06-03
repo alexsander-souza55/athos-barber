@@ -25,6 +25,13 @@ class Barber(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     appointments = db.relationship("Appointment", backref="barber", lazy="dynamic")
+    schedule_exceptions = db.relationship(
+        "BarberScheduleException",
+        back_populates="barber",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+        order_by="BarberScheduleException.date",
+    )
 
     # ── Foto ────────────────────────────────────────────────
     @property

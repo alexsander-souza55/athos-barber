@@ -7,7 +7,7 @@ from app.models.barber import Barber
 from app.models.user import User
 from app.models.appointment import Appointment
 from app.models.service import Service
-from app.barbers.forms import CreateBarberForm, EditBarberForm
+from app.barbers.forms import CreateBarberForm, EditBarberForm, ScheduleExceptionForm
 from app.utils.decorators import admin_required
 from app.utils.helpers import save_upload, delete_upload, allowed_file
 
@@ -102,10 +102,24 @@ def detail(barber_id: int):
         .all()
     )
 
+    from app.models.barber_schedule_exception import BarberScheduleException
+    from datetime import timedelta
+    upcoming_window = today + timedelta(days=60)
+    exceptions = (
+        BarberScheduleException.query
+        .filter_by(barber_id=barber_id)
+        .filter(BarberScheduleException.date >= today)
+        .filter(BarberScheduleException.date <= upcoming_window)
+        .order_by(BarberScheduleException.date)
+        .all()
+    )
+    exc_form = ScheduleExceptionForm()
+
     return render_template(
         "barbers/detail.html",
         barber=barber, stats=stats,
         today_appts=today_appts, recent=recent, today=today,
+        exceptions=exceptions, exc_form=exc_form,
     )
 
 
@@ -279,6 +293,83 @@ def delete(barber_id: int):
     db.session.commit()
     flash(f"Barbeiro '{name}' e sua conta de acesso foram excluídos.", "info")
     return redirect(url_for("barbers.index"))
+
+
+# ── Exceções de agenda ────────────────────────────────────────────────────────
+def _can_manage_exceptions(barber_id: int) -> bool:
+    from flask_login import current_user
+    if current_user.is_admin:
+        return True
+    return (
+        current_user.is_barber
+        and current_user.barber_profile is not None
+        and current_user.barber_profile.id == barber_id
+    )
+
+
+@barbers_bp.route("/<int:barber_id>/exceptions/add", methods=["POST"])
+@login_required
+def add_exception(barber_id: int):
+    if not _can_manage_exceptions(barber_id):
+        flash("Acesso negado.", "danger")
+        return redirect(url_for("barbers.detail", barber_id=barber_id))
+
+    barber = Barber.query.get_or_404(barber_id)
+    form = ScheduleExceptionForm()
+
+    if form.validate_on_submit():
+        from app.models.barber_schedule_exception import BarberScheduleException
+        from sqlalchemy.exc import IntegrityError
+
+        start_t = _parse_time_safe(form.start_time.data) if form.exception_type.data == "custom_hours" else None
+        end_t = _parse_time_safe(form.end_time.data) if form.exception_type.data == "custom_hours" else None
+
+        exc = BarberScheduleException(
+            barber_id=barber_id,
+            date=form.date.data,
+            exception_type=form.exception_type.data,
+            start_time=start_t,
+            end_time=end_t,
+            reason=(form.reason.data or "").strip() or None,
+        )
+        try:
+            db.session.add(exc)
+            db.session.commit()
+            flash(
+                f"Exceção adicionada: {form.date.data.strftime('%d/%m/%Y')} — {exc.type_label}.",
+                "success",
+            )
+        except IntegrityError:
+            db.session.rollback()
+            flash(
+                f"Já existe uma exceção cadastrada para {form.date.data.strftime('%d/%m/%Y')}. "
+                "Remova a existente antes de adicionar outra.",
+                "warning",
+            )
+    else:
+        for field_errors in form.errors.values():
+            for e in field_errors:
+                flash(e, "danger")
+
+    return redirect(url_for("barbers.detail", barber_id=barber_id))
+
+
+@barbers_bp.route("/<int:barber_id>/exceptions/<int:exc_id>/remove", methods=["POST"])
+@login_required
+def remove_exception(barber_id: int, exc_id: int):
+    if not _can_manage_exceptions(barber_id):
+        flash("Acesso negado.", "danger")
+        return redirect(url_for("barbers.detail", barber_id=barber_id))
+
+    from app.models.barber_schedule_exception import BarberScheduleException
+    exc = BarberScheduleException.query.filter_by(
+        id=exc_id, barber_id=barber_id
+    ).first_or_404()
+    date_str = exc.date.strftime("%d/%m/%Y")
+    db.session.delete(exc)
+    db.session.commit()
+    flash(f"Exceção de {date_str} removida.", "info")
+    return redirect(url_for("barbers.detail", barber_id=barber_id))
 
 
 # ── Helpers internos ──────────────────────────────────────────────────────────

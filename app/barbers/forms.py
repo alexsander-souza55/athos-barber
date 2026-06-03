@@ -3,7 +3,7 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import (
     StringField, PasswordField, TextAreaField,
-    BooleanField, SubmitField,
+    BooleanField, SubmitField, SelectField, DateField,
 )
 from wtforms.validators import (
     DataRequired, Email, Length, EqualTo, Optional, ValidationError,
@@ -159,6 +159,54 @@ class EditBarberForm(FlaskForm):
         if self.work_start_time.data:
             try:
                 start = _parse_time(self.work_start_time.data)
+                if end <= start:
+                    raise ValidationError("Horário de fim deve ser posterior ao de início.")
+            except ValueError:
+                pass
+
+
+# ── Exceção de agenda ─────────────────────────────────────────────────────────
+class ScheduleExceptionForm(FlaskForm):
+
+    date = DateField("Data", validators=[DataRequired(message="Selecione uma data.")])
+    exception_type = SelectField(
+        "Tipo",
+        choices=[("day_off", "Folga"), ("custom_hours", "Horário especial")],
+        validators=[DataRequired()],
+    )
+    start_time = StringField("Início", validators=[Optional()])
+    end_time = StringField("Fim", validators=[Optional()])
+    reason = StringField("Motivo (opcional)", validators=[Optional(), Length(max=255)])
+
+    submit = SubmitField("Salvar exceção")
+
+    def validate_date(self, field):
+        from datetime import date
+        if field.data and field.data < date.today():
+            raise ValidationError("A data não pode ser no passado.")
+
+    def validate_start_time(self, field):
+        if self.exception_type.data != "custom_hours":
+            return
+        if not field.data:
+            raise ValidationError("Informe o horário de início.")
+        try:
+            _parse_time(field.data)
+        except ValueError:
+            raise ValidationError("Use o formato HH:MM.")
+
+    def validate_end_time(self, field):
+        if self.exception_type.data != "custom_hours":
+            return
+        if not field.data:
+            raise ValidationError("Informe o horário de fim.")
+        try:
+            end = _parse_time(field.data)
+        except ValueError:
+            raise ValidationError("Use o formato HH:MM.")
+        if self.start_time.data:
+            try:
+                start = _parse_time(self.start_time.data)
                 if end <= start:
                     raise ValidationError("Horário de fim deve ser posterior ao de início.")
             except ValueError:

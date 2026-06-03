@@ -96,6 +96,72 @@
   </div>
 </div>
 
+<!-- ── Clube Athos ────────────────────────────────────── -->
+{% if subscription %}
+<div class="card card-dark mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="fw-bold mb-0">
+      <i class="bi bi-award text-accent me-2"></i>Clube Athos
+    </h6>
+    <div class="d-flex gap-2 align-items-center">
+      <span class="badge-athos {{ subscription.status_badge }}">{{ subscription.status_label }}</span>
+      {% if subscription.is_expiring_soon and subscription.effective_status == 'active' %}
+      <span class="badge bg-warning bg-opacity-20 text-warning border border-warning border-opacity-25"
+            style="font-size:.65rem">
+        <i class="bi bi-exclamation-circle me-1"></i>Vence em {{ subscription.days_remaining }}d
+      </span>
+      {% endif %}
+      <a href="{{ url_for('subscriptions.detail', sub_id=subscription.id) }}"
+         class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-eye me-1"></i>Detalhe
+      </a>
+    </div>
+  </div>
+  <div class="card-body p-4">
+    <div class="row g-3 align-items-start">
+      <div class="col-md-5">
+        <div class="text-accent fw-semibold small mb-1">{{ subscription.plan.name }}</div>
+        <div class="text-muted small">
+          <i class="bi bi-calendar-check me-1"></i>
+          {{ subscription.start_date.strftime('%d/%m/%Y') }}
+          → {{ subscription.end_date.strftime('%d/%m/%Y') }}
+        </div>
+        {% if subscription.plan %}
+        <div class="text-muted small mt-1">
+          <i class="bi bi-cash-coin me-1"></i>{{ subscription.plan.price_formatted }}/mês
+        </div>
+        {% endif %}
+      </div>
+      <div class="col-md-7">
+        <div class="d-flex flex-wrap gap-3">
+          {% for c in subscription.credits_summary() %}
+          <div class="credit-pill {% if c.remaining == 0 %}used{% endif %}">
+            <span class="credit-pill-name">{{ c.service_name }}</span>
+            <span class="credit-pill-count">{{ c.remaining }}/{{ c.total }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="card card-dark mb-4">
+  <div class="card-body d-flex align-items-center justify-content-between px-4 py-3">
+    <div class="d-flex align-items-center gap-3">
+      <i class="bi bi-award text-muted fs-4 opacity-50"></i>
+      <div>
+        <div class="small fw-semibold">Clube Athos</div>
+        <div class="text-muted" style="font-size:.75rem">Sem assinatura ativa</div>
+      </div>
+    </div>
+    <a href="{{ url_for('subscriptions.new') }}" class="btn btn-sm btn-outline-gold">
+      <i class="bi bi-plus me-1"></i>Assinar
+    </a>
+  </div>
+</div>
+{% endif %}
+
 <!-- ── Histórico ──────────────────────────────────────── -->
 <div class="card card-dark">
   <div class="card-header d-flex justify-content-between align-items-center">
@@ -169,6 +235,25 @@
 .hero-info { flex: 1; min-width: 200px; }
 .hero-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
 .small-value { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem !important; }
+
+.credit-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(204,31,31,.08); border: 1px solid rgba(204,31,31,.25);
+  border-radius: 2px; padding: 4px 10px;
+}
+.credit-pill.used { background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.08); }
+.credit-pill-name {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .7rem; font-weight: 600; color: var(--c-text-muted);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.credit-pill-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .78rem; font-weight: 700; color: var(--c-accent);
+}
+.credit-pill.used .credit-pill-count { color: var(--c-text-muted); }
+.btn-outline-gold { border-color: var(--c-accent); color: var(--c-accent); }
+.btn-outline-gold:hover { background: var(--c-accent); color: #0a0a0a; }
 
 @media (max-width: 576px) {
   .hero-body { flex-direction: column; align-items: center; text-align: center; }

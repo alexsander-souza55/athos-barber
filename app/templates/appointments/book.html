@@ -87,7 +87,10 @@
       <form method="POST" action="{{ url_for('appointments.book') }}" novalidate id="bookForm">
         {{ form.hidden_tag() }}
 
-        <!-- PASSO 1 — Serviço -->
+        <!-- hidden inputs para serviço e kit -->
+        <input type="hidden" name="kit_id" id="kit_id" value="">
+
+        <!-- PASSO 1 — Serviço ou Kit -->
         <div class="step-card mb-3" id="step1">
           <div class="step-header">
             <div class="step-num">1</div>
@@ -97,6 +100,33 @@
             </div>
           </div>
           <div class="step-body" id="body_service">
+
+            {% if kits %}
+            <div class="svc-section-label">Kits</div>
+            <div class="row g-2 mt-1 mb-3">
+              {% for k in kits %}
+              <div class="col-6 col-md-4">
+                <div class="opt-card opt-card-kit"
+                     data-step="kit"
+                     data-id="{{ k.id }}"
+                     data-label="{{ k.name }}"
+                     data-duration="{{ k.total_duration_minutes }}"
+                     data-price="{{ k.price_formatted }}"
+                     data-primary-service="{{ k.items[0].service_id if k.items else 0 }}">
+                  <div class="kit-badge">Kit</div>
+                  <div class="opt-name">{{ k.name }}</div>
+                  <div class="opt-price">{{ k.price_formatted }}</div>
+                  <div class="opt-info">
+                    <i class="bi bi-clock me-1"></i>{{ k.duration_formatted }}
+                  </div>
+                  <div class="opt-desc">{{ k.services_summary }}</div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="svc-section-label">Serviços avulsos</div>
+            {% endif %}
+
             {% if services %}
             <div class="row g-2 mt-1">
               {% for s in services %}
@@ -669,9 +699,12 @@
   transition: border-color var(--t-fast), background var(--t-fast);
   text-align: center;
   height: 100%;
+  position: relative;
 }
 .opt-card:hover { border-color: rgba(204,31,31,.45); background: rgba(204,31,31,.04); }
 .opt-card.selected { border-color: var(--c-white); background: rgba(232,232,224,.05); }
+.opt-card-kit { border-color: rgba(204,31,31,.22); }
+.opt-card-kit.selected { border-color: var(--c-accent); background: rgba(204,31,31,.06); }
 .opt-name  {
   font-family: 'Josefin Sans', sans-serif;
   font-weight: 700; font-size: .85rem;
@@ -688,6 +721,21 @@
 .opt-desc  {
   font-family: 'Josefin Sans', sans-serif;
   color: var(--c-text-muted); font-size: .65rem; margin-top: 4px;
+}
+.kit-badge {
+  position: absolute; top: 6px; right: 6px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .6rem; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--c-accent);
+  border: 1px solid rgba(204,31,31,.35); border-radius: 2px;
+  padding: 1px 5px;
+}
+.svc-section-label {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .65rem; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--c-text-muted);
+  border-bottom: 1px solid var(--c-border);
+  padding-bottom: 4px; margin-top: 4px;
 }
 
 /* ── Barber thumbs ────────────────────────────────────── */
@@ -953,6 +1001,7 @@ function openCancelModal(id, cpf, barber, date, time) {
 // ═══════════════════════════════════════════════════════════
 const state = {
   serviceId: '', serviceName: '', serviceDuration: 0, servicePrice: '',
+  kitId: '', primaryServiceId: '',
   barberId: '', barberName: '',
   date: '', dateDisplay: '',
   time: '',
@@ -960,6 +1009,7 @@ const state = {
 
 const $ = id => document.getElementById(id);
 const inpService = $('service_id');
+const inpKit     = $('kit_id');
 const inpBarber  = $('barber_id');
 const inpDate    = $('scheduled_date');
 const inpTime    = $('scheduled_time');
@@ -1010,9 +1060,16 @@ function resetFrom(fromNum) {
   }
 }
 
+function clearServiceSelection() {
+  document.querySelectorAll('[data-step="service"],[data-step="kit"]').forEach(c => c.classList.remove('selected'));
+  state.serviceId = ''; state.serviceName = ''; state.serviceDuration = 0; state.servicePrice = '';
+  state.kitId = ''; state.primaryServiceId = '';
+  inpService.value = ''; if (inpKit) inpKit.value = '';
+}
+
 document.querySelectorAll('[data-step="service"]').forEach(card => {
   card.addEventListener('click', function () {
-    document.querySelectorAll('[data-step="service"]').forEach(c => c.classList.remove('selected'));
+    clearServiceSelection();
     this.classList.add('selected');
     const changed = state.serviceId !== this.dataset.id;
     state.serviceId = this.dataset.id;
@@ -1020,6 +1077,24 @@ document.querySelectorAll('[data-step="service"]').forEach(card => {
     state.serviceDuration = parseInt(this.dataset.duration, 10);
     state.servicePrice = this.dataset.price;
     inpService.value = state.serviceId;
+    markDone(1, `${state.serviceName} — ${state.servicePrice}`);
+    if (changed) resetFrom(2);
+    unlockStep(2);
+  });
+});
+
+document.querySelectorAll('[data-step="kit"]').forEach(card => {
+  card.addEventListener('click', function () {
+    clearServiceSelection();
+    this.classList.add('selected');
+    const changed = state.kitId !== this.dataset.id;
+    state.kitId = this.dataset.id;
+    state.primaryServiceId = this.dataset.primaryService || '';
+    state.serviceName = this.dataset.label;
+    state.serviceDuration = parseInt(this.dataset.duration, 10);
+    state.servicePrice = this.dataset.price;
+    if (inpKit) inpKit.value = state.kitId;
+    inpService.value = state.primaryServiceId;
     markDone(1, `${state.serviceName} — ${state.servicePrice}`);
     if (changed) resetFrom(2);
     unlockStep(2);
@@ -1056,7 +1131,7 @@ if (datePicker) {
 }
 
 function loadSlots() {
-  if (!state.barberId || !state.serviceId || !state.date) return;
+  if (!state.barberId || (!state.serviceId && !state.kitId) || !state.date) return;
   const grid  = $('slots_grid');
   const spin  = $('slots_loading');
   const empty = $('slots_empty');
@@ -1064,7 +1139,10 @@ function loadSlots() {
   spin.style.display = 'block';
   empty.style.display = 'none';
 
-  fetch(`/appointments/slots?barber_id=${state.barberId}&service_id=${state.serviceId}&date=${state.date}`)
+  const slotsUrl = state.kitId
+    ? `/appointments/slots?barber_id=${state.barberId}&kit_id=${state.kitId}&date=${state.date}`
+    : `/appointments/slots?barber_id=${state.barberId}&service_id=${state.serviceId}&date=${state.date}`;
+  fetch(slotsUrl)
     .then(r => r.json())
     .then(data => {
       spin.style.display = 'none';
@@ -1079,6 +1157,9 @@ function loadSlots() {
         });
       }
       if (slots.length === 0) {
+        empty.innerHTML = data.reason === 'day_off'
+          ? '<i class="bi bi-calendar-x me-1"></i>Barbeiro não disponível nesta data.'
+          : '<i class="bi bi-exclamation-circle me-1"></i>Nenhum horário disponível nesta data. Tente outro dia.';
         empty.style.display = 'block'; return;
       }
       slots.forEach(slot => {
@@ -1106,7 +1187,7 @@ function loadSlots() {
 }
 
 function updateSummary() {
-  if (!state.serviceId) { $('summaryCard').style.display = 'none'; return; }
+  if (!state.serviceId && !state.kitId) { $('summaryCard').style.display = 'none'; return; }
   $('sum_service').textContent = state.serviceName + (state.servicePrice ? ` — ${state.servicePrice}` : '');
   $('sum_barber').textContent  = state.barberName || '—';
   $('sum_date').textContent    = state.dateDisplay || '—';
@@ -1118,7 +1199,8 @@ function updateConfirmBtn() {
   const nameOk  = ($('inp_name')  || {value:''}).value.trim().length >= 2;
   const phoneOk = ($('inp_phone') || {value:''}).value.trim().length >= 5;
   const cpfOk   = ($('inp_cpf')   || {value:''}).value.replace(/\D/g,'').length === 11;
-  const allSet  = state.serviceId && state.barberId && state.date && state.time && nameOk && phoneOk && cpfOk;
+  const hasService = state.serviceId || state.kitId;
+  const allSet  = hasService && state.barberId && state.date && state.time && nameOk && phoneOk && cpfOk;
   $('btnConfirm').disabled = !allSet;
 }
 
@@ -1147,8 +1229,12 @@ document.getElementById('bookForm').addEventListener('submit', function () {
 
 // Restaurar estado se form foi resubmetido com erros
 (function initFromPostData() {
-  const svcId = inpService.value;
-  if (svcId) {
+  const kitVal = inpKit ? inpKit.value : '';
+  const svcId  = inpService.value;
+  if (kitVal) {
+    const card = document.querySelector(`[data-step="kit"][data-id="${kitVal}"]`);
+    if (card) card.click();
+  } else if (svcId) {
     const card = document.querySelector(`[data-step="service"][data-id="${svcId}"]`);
     if (card) card.click();
   }

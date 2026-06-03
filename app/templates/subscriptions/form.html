@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Nova Assinatura — Athos Barbearia{% endblock %}
+{% block page_title %}Nova Assinatura{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-xl-7 col-lg-8 col-md-10">
+
+    <nav class="mb-3" aria-label="breadcrumb">
+      <ol class="breadcrumb small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('subscriptions.index') }}" class="text-accent">Assinaturas</a>
+        </li>
+        <li class="breadcrumb-item active">Nova</li>
+      </ol>
+    </nav>
+
+    <form method="POST" novalidate id="subForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="card card-dark mb-4">
+        <div class="card-header">
+          <h6 class="fw-bold mb-0">
+            <i class="bi bi-award text-accent me-2"></i>Nova assinatura Clube Athos
+          </h6>
+        </div>
+        <div class="card-body p-4">
+          <div class="row g-3">
+
+            <!-- Cliente -->
+            <div class="col-12">
+              <label class="form-label fw-semibold small">
+                Cliente <span class="text-danger">*</span>
+              </label>
+              <select name="customer_id"
+                      class="form-select bg-dark border-secondary text-light">
+                <option value="">Selecione o cliente...</option>
+                {% for c in customers %}
+                <option value="{{ c.id }}">
+                  {{ c.name }}{% if c.cpf %} — {{ c.cpf }}{% endif %}
+                </option>
+                {% endfor %}
+              </select>
+              <div class="form-text">
+                Não encontrou?
+                <a href="{{ url_for('customers.new') }}" class="text-accent" target="_blank">
+                  Cadastrar cliente
+                </a>
+              </div>
+            </div>
+
+            <!-- Plano -->
+            <div class="col-12">
+              <label class="form-label fw-semibold small">
+                Plano <span class="text-danger">*</span>
+              </label>
+              {% for plan in plans %}
+              <div class="plan-card mb-2">
+                <input type="radio" name="plan_id" id="plan_{{ plan.id }}"
+                       value="{{ plan.id }}" class="plan-radio"
+                       {% if loop.first %}checked{% endif %}>
+                <label for="plan_{{ plan.id }}" class="plan-label">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <div class="fw-semibold small">{{ plan.name }}</div>
+                      <div class="text-muted mt-1" style="font-size:.75rem">
+                        {% for credit in plan.credits %}
+                        <span class="me-3">
+                          <i class="bi bi-check2 text-accent me-1"></i>
+                          {{ credit.quantity }}x {{ credit.service.name if credit.service else '?' }}
+                        </span>
+                        {% endfor %}
+                      </div>
+                    </div>
+                    <span class="plan-price">{{ plan.price_formatted }}</span>
+                  </div>
+                </label>
+              </div>
+              {% else %}
+              <div class="text-center py-4 text-muted">
+                <i class="bi bi-award d-block fs-3 mb-2 opacity-25"></i>
+                <div class="small">Nenhum plano cadastrado no sistema.</div>
+                <div class="mt-1" style="font-size:.72rem;font-family:'JetBrains Mono',monospace;color:var(--c-text-muted)">
+                  flask seed-subscription-plans
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+
+            <!-- Data de início -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Data de início</label>
+              <input type="date" name="start_date" id="startDate"
+                     class="form-control bg-dark border-secondary text-light"
+                     value="{{ today.isoformat() if today is defined else '' }}">
+            </div>
+
+            <!-- Validade -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Validade</label>
+              <select name="validity_days" id="validitySelect"
+                      class="form-select bg-dark border-secondary text-light">
+                {% for val, label in validity_options %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Data personalizada (oculta por padrão) -->
+            <div class="col-md-6" id="customEndRow" style="display:none">
+              <label class="form-label fw-semibold small">Data de vencimento</label>
+              <input type="date" name="end_date_custom" id="endDateCustom"
+                     class="form-control bg-dark border-secondary text-light">
+              <div class="form-text">Deve ser após a data de início.</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-gold px-4 fw-bold">
+          <i class="bi bi-award me-2"></i>Criar assinatura
+        </button>
+        <a href="{{ url_for('subscriptions.index') }}" class="btn btn-outline-secondary">
+          Cancelar
+        </a>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.plan-card { position: relative; }
+.plan-radio { position: absolute; opacity: 0; pointer-events: none; }
+.plan-label {
+  display: block; padding: 14px 16px;
+  background: var(--c-bg-2); border: 1px solid var(--c-border);
+  border-radius: 4px; cursor: pointer;
+  transition: border-color .12s;
+}
+.plan-radio:checked + .plan-label {
+  border-color: var(--c-accent);
+  background: rgba(204,31,31,.05);
+}
+.plan-label:hover { border-color: var(--c-text-muted); }
+.plan-price {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .9rem; font-weight: 700;
+  color: var(--c-accent); white-space: nowrap; flex-shrink: 0;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const dateInput = document.querySelector('input[name="start_date"]');
+if (dateInput && !dateInput.value) {
+  dateInput.value = new Date().toISOString().slice(0,10);
+}
+
+const validitySel = document.getElementById('validitySelect');
+const customRow   = document.getElementById('customEndRow');
+if (validitySel) {
+  validitySel.addEventListener('change', function () {
+    customRow.style.display = this.value === 'custom' ? 'block' : 'none';
+  });
+}
+</script>
+{% endblock %}

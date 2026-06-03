@@ -30,6 +30,9 @@ class Customer(db.Model):
 
     appointments = db.relationship("Appointment", backref="customer", lazy="dynamic")
     raffle_winners = db.relationship("RaffleWinner", back_populates="customer", lazy="dynamic")
+    subscriptions = db.relationship(
+        "CustomerSubscription", back_populates="customer", lazy="dynamic"
+    )
 
     # ── Estatísticas ─────────────────────────────────────────
     @property

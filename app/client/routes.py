@@ -122,10 +122,13 @@ def lookup():
         return redirect(url_for("client.lookup"))
 
     # GET — restore from session
+    subscription = None
     if cpf_input:
         customer = Customer.query.filter_by(cpf=cpf_input).first()
         if customer:
             appointments = _load_appointments(customer, date_from, date_to)
+            from app.subscriptions.service import get_active_subscription
+            subscription = get_active_subscription(customer.id)
 
     return render_template(
         "client/lookup.html",
@@ -136,6 +139,7 @@ def lookup():
         date_to=date_to,
         today=date.today(),
         STATUS_LABELS=APPOINTMENT_STATUSES,
+        subscription=subscription,
     )
 
 
@@ -170,6 +174,8 @@ def cancel_appointment(appt_id: int):
     if appt.status not in ("pending", "confirmed"):
         flash("Este agendamento não pode ser cancelado.", "warning")
     else:
+        from app.subscriptions.service import refund_credit
+        refund_credit(appt.id)
         appt.status = "cancelled"
         db.session.commit()
         flash("Agendamento cancelado.", "info")
@@ -220,7 +226,7 @@ def reschedule_appointment(appt_id: int):
 
         if not errors:
             if not is_slot_available(barber_id, appt.service_id, sched_date, sched_time,
-                                     exclude_appointment_id=appt.id):
+                                     exclude_appointment_id=appt.id, kit_id=appt.kit_id):
                 errors.append("Horário não disponível. Escolha outro slot.")
 
         if errors:
@@ -233,15 +239,26 @@ def reschedule_appointment(appt_id: int):
                 selected_date=date_str, selected_time=time_str,
             )
 
+        from app.subscriptions.service import refund_credit, consume_credit, consume_credit_kit
+        had_credits = refund_credit(appt.id)
         appt.status = "cancelled"
         new_appt = Appointment(
             customer_id=appt.customer_id,
             barber_id=barber_id,
             service_id=appt.service_id,
+            kit_id=appt.kit_id,
             scheduled_date=sched_date,
             scheduled_time=sched_time,
         )
         db.session.add(new_appt)
+        db.session.flush()
+
+        if had_credits:
+            if appt.kit_id and appt.kit:
+                consume_credit_kit(appt.customer_id, appt.kit, new_appt.id)
+            else:
+                consume_credit(appt.customer_id, appt.service_id, new_appt.id)
+
         db.session.commit()
         flash("Agendamento remarcado com sucesso!", "success")
         return redirect(url_for("client.lookup"))
@@ -297,8 +314,8 @@ def lookup_json():
                 "end_time": a.end_time_str or "",
                 "barber_name": a.barber.name if a.barber else "—",
                 "barber_whatsapp_link": a.barber.whatsapp_link if a.barber else None,
-                "service_name": a.service.name if a.service else "—",
-                "service_price": a.service.price_formatted if a.service else "—",
+                "service_name": (a.kit.name if a.kit else (a.service.name if a.service else "—")),
+                "service_price": (a.kit.price_formatted if a.kit else (a.service.price_formatted if a.service else "—")),
                 "is_past": a.scheduled_date < today,
                 "can_act": a.status in ("pending", "confirmed") and a.scheduled_date >= today,
                 "can_confirm": a.status == "pending" and a.scheduled_date >= today,
@@ -310,12 +327,13 @@ def lookup_json():
 
 @client_bp.route("/slots")
 def slots():
-    barber_id = request.args.get("barber_id", type=int)
+    barber_id  = request.args.get("barber_id",  type=int)
     service_id = request.args.get("service_id", type=int)
-    date_str = request.args.get("date", "")
+    kit_id     = request.args.get("kit_id",     type=int)
+    date_str   = request.args.get("date", "")
     exclude_id = request.args.get("exclude_id", type=int)
 
-    if not all([barber_id, service_id, date_str]):
+    if not barber_id or not date_str or (not service_id and not kit_id):
         return jsonify({"slots": []})
     try:
         target_date = date.fromisoformat(date_str)
@@ -325,5 +343,5 @@ def slots():
         return jsonify({"slots": []})
 
     available = get_available_slots(barber_id, service_id, target_date,
-                                    exclude_appointment_id=exclude_id)
+                                    exclude_appointment_id=exclude_id, kit_id=kit_id)
     return jsonify({"slots": [t.strftime("%H:%M") for t in available]})

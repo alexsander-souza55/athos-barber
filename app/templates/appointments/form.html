@@ -18,6 +18,8 @@
 
     <form method="POST" novalidate id="adminApptForm">
       {{ form.hidden_tag() }}
+      <!-- kit_id é submetido como campo livre -->
+      <input type="hidden" name="kit_id" id="kitIdInput" value="">
 
       <!-- ═ Dados do agendamento ═══════════════════════════ -->
       <div class="card card-dark mb-4">
@@ -44,8 +46,8 @@
               </div>
             </div>
 
-            <!-- Barbeiro + Serviço -->
-            <div class="col-md-6">
+            <!-- Barbeiro -->
+            <div class="col-12">
               <label class="form-label fw-semibold small">
                 {{ form.barber_id.label.text }} <span class="text-danger">*</span>
               </label>
@@ -56,15 +58,57 @@
               {% for e in form.barber_id.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
             </div>
 
-            <div class="col-md-6">
-              <label class="form-label fw-semibold small">
-                {{ form.service_id.label.text }} <span class="text-danger">*</span>
-              </label>
-              {{ form.service_id(
-                  class="form-select bg-dark border-secondary text-light" + (" is-invalid" if form.service_id.errors else ""),
-                  id="serviceSelect"
-              ) }}
-              {% for e in form.service_id.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            <!-- Serviço / Kit toggle -->
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Serviço <span class="text-danger">*</span></label>
+
+              <!-- Toggle tabs -->
+              <div class="svc-tabs mb-2">
+                <button type="button" class="svc-tab active" id="tabService" onclick="switchTab('service')">
+                  <i class="bi bi-scissors me-1"></i>Serviço avulso
+                </button>
+                {% if kits %}
+                <button type="button" class="svc-tab" id="tabKit" onclick="switchTab('kit')">
+                  <i class="bi bi-collection me-1"></i>Kit
+                </button>
+                {% endif %}
+              </div>
+
+              <!-- Serviço avulso -->
+              <div id="panelService">
+                {{ form.service_id(
+                    class="form-select bg-dark border-secondary text-light",
+                    id="serviceSelect"
+                ) }}
+                <div id="creditBadge" class="mt-2" style="display:none">
+                  <span class="badge"
+                        style="background:rgba(25,135,84,.15);color:#5db882;border:1px solid rgba(25,135,84,.3);font-size:.72rem">
+                    <i class="bi bi-check-circle me-1"></i><span id="creditBadgeText"></span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Kit -->
+              {% if kits %}
+              <div id="panelKit" style="display:none">
+                <select id="kitSelect" class="form-select bg-dark border-secondary text-light">
+                  <option value="">— Selecione um kit —</option>
+                  {% for k in kits %}
+                  <option value="{{ k.id }}"
+                          data-primary-service="{{ k.items[0].service_id if k.items else 0 }}"
+                          data-duration="{{ k.total_duration_minutes }}">
+                    {{ k.name }} — {{ k.duration_formatted }} — {{ k.price_formatted }}
+                  </option>
+                  {% endfor %}
+                </select>
+                <div id="creditBadgeKit" class="mt-2" style="display:none">
+                  <span class="badge"
+                        style="background:rgba(25,135,84,.15);color:#5db882;border:1px solid rgba(25,135,84,.3);font-size:.72rem">
+                    <i class="bi bi-check-circle me-1"></i><span id="creditBadgeKitText"></span>
+                  </span>
+                </div>
+              </div>
+              {% endif %}
             </div>
 
             <!-- Data + Horário -->
@@ -91,10 +135,10 @@
               {% for e in form.scheduled_time.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
             </div>
 
-            <!-- Slots disponíveis (carregados via AJAX) -->
+            <!-- Slots disponíveis -->
             <div class="col-12" id="slotsSection" style="display:none">
               <p class="text-muted small mb-2">
-                <i class="bi bi-clock text-accent me-1"></i>Horários disponíveis para a seleção:
+                <i class="bi bi-clock text-accent me-1"></i>Horários disponíveis:
               </p>
               <div id="slotsGrid" class="d-flex flex-wrap gap-2"></div>
               <div id="slotsLoading" class="text-muted small" style="display:none">
@@ -148,32 +192,88 @@
 .slot-btn:hover, .slot-btn.active {
   background: var(--c-white); color: #0a0a0a; font-weight: 700; border-color: var(--c-white);
 }
+.svc-tabs { display: flex; gap: 6px; }
+.svc-tab {
+  padding: 5px 14px; border-radius: 2px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .72rem; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase;
+  border: 1px solid var(--c-border); color: var(--c-text-muted);
+  background: transparent; cursor: pointer; transition: border-color .12s, color .12s;
+}
+.svc-tab.active { border-color: var(--c-accent); color: var(--c-accent); }
+.svc-tab:not(.active):hover { border-color: var(--c-text-2); color: var(--c-text-2); }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const barberSel  = document.getElementById('barberSelect');
-const serviceSel = document.getElementById('serviceSelect');
-const dateInput  = document.getElementById('dateInput');
-const timeInput  = document.getElementById('timeInput');
+let currentTab = 'service';
+
+const barberSel   = document.getElementById('barberSelect');
+const serviceSel  = document.getElementById('serviceSelect');
+const kitSel      = document.getElementById('kitSelect');
+const kitIdInput  = document.getElementById('kitIdInput');
+const dateInput   = document.getElementById('dateInput');
+const timeInput   = document.getElementById('timeInput');
 const slotsSection = document.getElementById('slotsSection');
 const slotsGrid    = document.getElementById('slotsGrid');
 const slotsLoading = document.getElementById('slotsLoading');
 const slotsEmpty   = document.getElementById('slotsEmpty');
 
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('panelService').style.display = tab === 'service' ? 'block' : 'none';
+  const panelKit = document.getElementById('panelKit');
+  if (panelKit) panelKit.style.display = tab === 'kit' ? 'block' : 'none';
+  document.getElementById('tabService').classList.toggle('active', tab === 'service');
+  const tabKit = document.getElementById('tabKit');
+  if (tabKit) tabKit.classList.toggle('active', tab === 'kit');
+  if (tab === 'service') {
+    kitIdInput.value = '';
+  } else {
+    applyKitSelection();
+  }
+  maybeLoadSlots();
+  checkCredit();
+}
+
+function applyKitSelection() {
+  if (!kitSel || !kitSel.value) {
+    kitIdInput.value = '';
+    return;
+  }
+  const opt = kitSel.options[kitSel.selectedIndex];
+  kitIdInput.value = kitSel.value;
+  // Auto-preenche service_id com o serviço primário do kit (para validação do form)
+  const primarySvc = opt.dataset.primaryService;
+  if (primarySvc && serviceSel) {
+    serviceSel.value = primarySvc;
+  }
+}
+
+function getSlotsParams() {
+  const barberId = barberSel ? barberSel.value : '';
+  const dateVal  = dateInput ? dateInput.value : '';
+  if (!barberId || !dateVal) return null;
+  if (currentTab === 'kit' && kitSel && kitSel.value) {
+    return `barber_id=${barberId}&kit_id=${kitSel.value}&date=${dateVal}`;
+  }
+  const serviceId = serviceSel ? serviceSel.value : '';
+  if (!serviceId || serviceId === '0') return null;
+  return `barber_id=${barberId}&service_id=${serviceId}&date=${dateVal}`;
+}
+
 function maybeLoadSlots() {
-  const barberId  = barberSel.value;
-  const serviceId = serviceSel.value;
-  const dateVal   = dateInput.value;
-  if (!barberId || !serviceId || !dateVal) { slotsSection.style.display = 'none'; return; }
+  const params = getSlotsParams();
+  if (!params) { slotsSection.style.display = 'none'; return; }
 
   slotsSection.style.display = 'block';
   slotsGrid.innerHTML = '';
   slotsLoading.style.display = 'block';
   slotsEmpty.style.display = 'none';
 
-  fetch(`/appointments/slots?barber_id=${barberId}&service_id=${serviceId}&date=${dateVal}`)
+  fetch(`/appointments/slots?${params}`)
     .then(r => r.json())
     .then(data => {
       slotsLoading.style.display = 'none';
@@ -199,6 +299,60 @@ function maybeLoadSlots() {
 [barberSel, serviceSel, dateInput].forEach(el => {
   if (el) el.addEventListener('change', maybeLoadSlots);
 });
+if (kitSel) {
+  kitSel.addEventListener('change', function () {
+    applyKitSelection();
+    maybeLoadSlots();
+    checkCredit();
+  });
+}
 maybeLoadSlots();
+
+// ── Credit check ─────────────────────────────────────────
+const customerSel = document.getElementById('customerSelect');
+const creditBadge = document.getElementById('creditBadge');
+const creditText  = document.getElementById('creditBadgeText');
+const creditBadgeKit  = document.getElementById('creditBadgeKit');
+const creditTextKit   = document.getElementById('creditBadgeKitText');
+
+function checkCredit() {
+  const customerId = customerSel ? customerSel.value : null;
+  if (!customerId) return;
+
+  if (currentTab === 'kit' && kitSel && kitSel.value) {
+    if (creditBadge) creditBadge.style.display = 'none';
+    if (!creditBadgeKit) return;
+    fetch(`/subscriptions/api/credit-check?customer_id=${customerId}&kit_id=${kitSel.value}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.has_credit) {
+          creditTextKit.textContent = `Kit coberto pelo ${data.plan_name}`;
+          creditBadgeKit.style.display = 'block';
+        } else {
+          creditBadgeKit.style.display = 'none';
+        }
+      })
+      .catch(() => { if (creditBadgeKit) creditBadgeKit.style.display = 'none'; });
+    return;
+  }
+
+  if (creditBadgeKit) creditBadgeKit.style.display = 'none';
+  const serviceId = serviceSel ? serviceSel.value : null;
+  if (!serviceId || serviceId === '0' || !creditBadge) return;
+  fetch(`/subscriptions/api/credit-check?customer_id=${customerId}&service_id=${serviceId}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.has_credit) {
+        creditText.textContent = `Crédito Clube Athos — ${data.plan_name} (${data.remaining} restante(s))`;
+        creditBadge.style.display = 'block';
+      } else {
+        creditBadge.style.display = 'none';
+      }
+    })
+    .catch(() => { creditBadge.style.display = 'none'; });
+}
+
+if (customerSel) customerSel.addEventListener('change', checkCredit);
+if (serviceSel)  serviceSel.addEventListener('change', checkCredit);
 </script>
 {% endblock %}

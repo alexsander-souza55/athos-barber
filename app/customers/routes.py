@@ -104,9 +104,13 @@ def detail(customer_id: int):
         "last_appt": last_appt,
     }
 
+    from app.subscriptions.service import get_active_subscription
+    subscription = get_active_subscription(customer_id)
+
     return render_template(
         "customers/detail.html",
         customer=customer, stats=stats, recent=recent,
+        subscription=subscription,
     )
 
 

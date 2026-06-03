@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %}Assinatura #{{ sub.id }} — Athos Barbearia{% endblock %}
+{% block page_title %}Detalhe da Assinatura{% endblock %}
+
+{% block content %}
+
+<!-- ── Breadcrumb ─────────────────────────────────────── -->
+<nav class="mb-3 mt-2" aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('subscriptions.index') }}" class="text-accent">Assinaturas</a>
+    </li>
+    <li class="breadcrumb-item active text-muted">
+      {{ sub.customer.name if sub.customer else '#' + sub.id|string }}
+    </li>
+  </ol>
+</nav>
+
+<!-- ── Hero Card ──────────────────────────────────────── -->
+<div class="card card-dark mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex align-items-start gap-4 flex-wrap">
+
+      <div class="sub-avatar flex-shrink-0">
+        {% if sub.customer %}{{ sub.customer.initials }}{% else %}?{% endif %}
+      </div>
+
+      <div class="flex-grow-1">
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+          <h5 class="fw-bold mb-0" style="font-family:'Playfair Display',serif">
+            {{ sub.customer.name if sub.customer else 'Cliente removido' }}
+          </h5>
+          <span class="badge-athos {{ sub.status_badge }}">{{ sub.status_label }}</span>
+          {% if sub.is_expiring_soon and sub.effective_status == 'active' %}
+          <span class="badge bg-warning bg-opacity-20 text-warning border border-warning border-opacity-25"
+                style="font-size:.68rem">
+            <i class="bi bi-exclamation-circle me-1"></i>Vence em {{ sub.days_remaining }} dia(s)
+          </span>
+          {% endif %}
+        </div>
+
+        <div class="text-accent fw-semibold small mb-2">{{ sub.plan.name if sub.plan else '—' }}</div>
+
+        <div class="d-flex flex-wrap gap-4 text-muted small">
+          <span><i class="bi bi-calendar-check me-1 text-accent"></i>
+            Início: {{ sub.start_date.strftime('%d/%m/%Y') }}
+          </span>
+          <span><i class="bi bi-calendar-x me-1 {% if sub.is_expired %}text-danger{% else %}text-accent{% endif %}"></i>
+            Vencimento: {{ sub.end_date.strftime('%d/%m/%Y') }}
+          </span>
+          {% if sub.plan %}
+          <span><i class="bi bi-cash-coin me-1 text-accent"></i>{{ sub.plan.price_formatted }}/mês</span>
+          {% endif %}
+          {% if sub.renewed_at %}
+          <span><i class="bi bi-arrow-repeat me-1"></i>
+            Renovada em {{ sub.renewed_at.strftime('%d/%m/%Y') }}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Ações -->
+      <div class="d-flex flex-column gap-2 align-items-end">
+        {% if sub.effective_status != 'cancelled' %}
+        <form method="POST" action="{{ url_for('subscriptions.renew', sub_id=sub.id) }}"
+              id="renewForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="d-flex gap-2 align-items-center mb-2">
+            <select name="validity_days" id="renewValidity"
+                    class="form-select form-select-sm bg-dark border-secondary text-light"
+                    style="width:auto;font-size:.78rem">
+              {% for val, label in validity_options %}
+              <option value="{{ val }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-gold btn-sm"
+                    onclick="return confirm('Renovar assinatura? Créditos serão somados ao saldo atual.')">
+              <i class="bi bi-arrow-repeat me-1"></i>Renovar
+            </button>
+          </div>
+          <div id="renewCustomRow" style="display:none;margin-bottom:.5rem">
+            <input type="date" name="end_date_custom"
+                   class="form-control form-control-sm bg-dark border-secondary text-light"
+                   style="font-size:.78rem">
+          </div>
+        </form>
+        <form method="POST" action="{{ url_for('subscriptions.cancel', sub_id=sub.id) }}"
+              onsubmit="return confirm('Cancelar esta assinatura?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-x-circle me-1"></i>Cancelar
+          </button>
+        </form>
+        {% endif %}
+        {% if sub.customer %}
+        <a href="{{ url_for('customers.detail', customer_id=sub.customer_id) }}"
+           class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-person me-1"></i>Ver cliente
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Créditos ────────────────────────────────────────── -->
+<h6 class="fw-bold text-muted small text-uppercase letter-spacing mb-3">
+  <i class="bi bi-coin text-accent me-2"></i>Saldo de créditos
+</h6>
+<div class="row g-3 mb-4">
+  {% for bal in sub.credit_balances %}
+  <div class="col-md-4 col-sm-6">
+    <div class="credit-card">
+      <div class="credit-service">{{ bal.service.name if bal.service else '—' }}</div>
+      <div class="credit-numbers">
+        <span class="credit-remaining {% if bal.remaining_credits == 0 %}text-muted{% endif %}">
+          {{ bal.remaining_credits }}
+        </span>
+        <span class="credit-sep">/</span>
+        <span class="credit-total">{{ bal.total_credits }}</span>
+      </div>
+      <div class="credit-bar">
+        {% if bal.total_credits > 0 %}
+        {% set pct = (bal.used_credits / bal.total_credits * 100)|int %}
+        <div class="credit-bar-fill {% if pct >= 100 %}used{% endif %}"
+             style="width:{{ pct }}%"></div>
+        {% endif %}
+      </div>
+      <div class="credit-meta text-muted">
+        {{ bal.used_credits }} usados · {{ bal.remaining_credits }} restantes
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12 text-muted small">Nenhum crédito configurado para este plano.</div>
+  {% endfor %}
+</div>
+
+<!-- ── Histórico de uso ────────────────────────────────── -->
+<div class="card card-dark">
+  <div class="card-header">
+    <h6 class="fw-bold mb-0">
+      <i class="bi bi-clock-history text-accent me-2"></i>Histórico de uso de créditos
+    </h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Serviço</th>
+          <th>Agendamento</th>
+          <th>Obs.</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usages %}
+        <tr>
+          <td class="small text-muted" style="font-family:'JetBrains Mono',monospace">
+            {{ u.used_at.strftime('%d/%m/%Y %H:%M') }}
+          </td>
+          <td class="small">{{ u.service.name if u.service else '—' }}</td>
+          <td class="small">
+            {% if u.appointment %}
+            <span class="text-accent">#{{ u.appointment_id }}</span>
+            {{ u.appointment.scheduled_date.strftime('%d/%m/%Y') }}
+            às {{ u.appointment.scheduled_time.strftime('%H:%M') }}
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">{{ u.notes or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" class="text-center text-muted py-4">
+            <i class="bi bi-inbox d-block fs-3 mb-1 opacity-25"></i>
+            Nenhum crédito utilizado ainda.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.sub-avatar {
+  width: 72px; height: 72px; border-radius: 4px;
+  background: #1a1a1a; border: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.7rem; font-weight: 700; color: var(--c-text-2);
+}
+.letter-spacing { letter-spacing: .1em; }
+
+.credit-card {
+  background: var(--c-bg-2); border: 1px solid var(--c-border);
+  border-radius: 4px; padding: 16px 20px;
+}
+.credit-service {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .75rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--c-text-muted); margin-bottom: 8px;
+}
+.credit-numbers {
+  display: flex; align-items: baseline; gap: 2px;
+  margin-bottom: 10px;
+}
+.credit-remaining {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem; font-weight: 700; color: var(--c-accent);
+  line-height: 1;
+}
+.credit-sep { color: var(--c-border); font-size: 1.3rem; margin: 0 2px; }
+.credit-total { color: var(--c-text-muted); font-size: 1rem; }
+.credit-bar {
+  height: 4px; background: rgba(255,255,255,.06);
+  border-radius: 2px; overflow: hidden; margin-bottom: 6px;
+}
+.credit-bar-fill {
+  height: 100%; background: var(--c-accent);
+  border-radius: 2px; transition: width .3s;
+}
+.credit-bar-fill.used { background: var(--c-text-muted); }
+.credit-meta { font-size: .7rem; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const renewValidity = document.getElementById('renewValidity');
+const renewCustomRow = document.getElementById('renewCustomRow');
+if (renewValidity) {
+  renewValidity.addEventListener('change', function () {
+    renewCustomRow.style.display = this.value === 'custom' ? 'block' : 'none';
+  });
+}
+</script>
+{% endblock %}

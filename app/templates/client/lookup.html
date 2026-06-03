@@ -55,7 +55,7 @@
 
     <!-- ── Resultados ──────────────────────────────────── -->
     {% if customer %}
-    <div class="d-flex align-items-center gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3 mb-3">
       <div class="lookup-avatar">{{ customer.initials }}</div>
       <div>
         <div class="fw-bold" style="font-family:'Playfair Display',serif;font-size:1.05rem">{{ customer.name }}</div>
@@ -67,6 +67,41 @@
         </span>
       </div>
     </div>
+
+    {% if subscription %}
+    <div class="sub-info-card mb-4">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <i class="bi bi-award text-accent"></i>
+        <span class="fw-semibold small" style="font-family:'Josefin Sans',sans-serif">
+          Clube Athos
+        </span>
+        <span class="badge-athos {{ subscription.status_badge }} ms-1">
+          {{ subscription.status_label }}
+        </span>
+        {% if subscription.is_expiring_soon and subscription.effective_status == 'active' %}
+        <span class="text-warning" style="font-size:.72rem">
+          <i class="bi bi-exclamation-circle me-1"></i>Vence em {{ subscription.days_remaining }} dia(s)
+        </span>
+        {% endif %}
+        <span class="text-muted small ms-auto" style="font-family:'JetBrains Mono',monospace">
+          até {{ subscription.end_date.strftime('%d/%m/%Y') }}
+        </span>
+      </div>
+      <div class="mt-2 text-muted small">{{ subscription.plan.name }}</div>
+      {% if subscription.credit_balances %}
+      <div class="mt-2 d-flex flex-wrap gap-2">
+        {% for bal in subscription.credit_balances %}
+        <span class="sub-credit-badge {% if bal.remaining_credits == 0 %}dimmed{% endif %}">
+          <span class="sub-credit-num">{{ bal.remaining_credits }}</span>
+          <span class="sub-credit-sep">/</span>
+          <span class="sub-credit-total">{{ bal.total_credits }}</span>
+          <span class="sub-credit-name">{{ bal.service.name if bal.service else '?' }}</span>
+        </span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
 
     {% if appointments %}
     {% for a in appointments %}
@@ -268,6 +303,32 @@
 .appt-value {
   font-family: 'Josefin Sans', sans-serif;
   font-size: .82rem; color: var(--c-text);
+}
+
+/* ── Subscription card ────────────────────────────────── */
+.sub-info-card {
+  background: rgba(204,31,31,.04);
+  border: 1px solid rgba(204,31,31,.2);
+  border-radius: 4px;
+  padding: 14px 16px;
+}
+.sub-credit-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: rgba(204,31,31,.1); border: 1px solid rgba(204,31,31,.2);
+  border-radius: 2px; padding: 3px 9px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.sub-credit-badge.dimmed {
+  background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.08);
+}
+.sub-credit-num  { font-size: .82rem; font-weight: 700; color: var(--c-accent); }
+.sub-credit-badge.dimmed .sub-credit-num { color: var(--c-text-muted); }
+.sub-credit-sep  { color: var(--c-border); font-size: .75rem; }
+.sub-credit-total { color: var(--c-text-muted); font-size: .72rem; margin-right: 4px; }
+.sub-credit-name  {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .68rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--c-text-muted);
 }
 
 /* ── Action buttons ───────────────────────────────────── */

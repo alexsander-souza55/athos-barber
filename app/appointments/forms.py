@@ -24,7 +24,8 @@ def _validate_cpf_digits(cpf: str) -> bool:
 class AppointmentAdminForm(FlaskForm):
     customer_id = SelectField("Cliente", coerce=int, validators=[DataRequired()])
     barber_id   = SelectField("Barbeiro", coerce=int, validators=[DataRequired()])
-    service_id  = SelectField("Serviço",  coerce=int, validators=[DataRequired()])
+    service_id  = SelectField("Serviço",  coerce=int, validators=[Optional()])
+    kit_id      = HiddenField()  # preenchido via JS quando kit é selecionado
     scheduled_date = DateField("Data", validators=[DataRequired()])
     scheduled_time = StringField("Horário (HH:MM)", validators=[DataRequired()])
     notes = TextAreaField("Observações", validators=[Optional(), Length(max=500)])
@@ -40,8 +41,9 @@ class AppointmentAdminForm(FlaskForm):
 
 # ── Formulário público (cliente agenda online) ────────────────────────────────
 class BookingForm(FlaskForm):
-    # Preenchidos pelo wizard JS — valores vindos dos hidden inputs
+    # Preenchidos pelo wizard JS
     service_id     = HiddenField()
+    kit_id         = HiddenField()  # preenchido quando kit é selecionado
     barber_id      = HiddenField()
     scheduled_date = HiddenField()
     scheduled_time = HiddenField()

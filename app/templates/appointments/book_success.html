@@ -42,9 +42,14 @@
                 <i class="bi bi-scissors me-1"></i>Serviço
               </div>
               <div class="col-8">
-                <span style="font-family:'Josefin Sans',sans-serif;font-size:.9rem;color:var(--c-text)">{{ appt.service.name if appt.service else '—' }}</span>
-                {% if appt.service %}
+                {% if appt.kit %}
+                <span style="font-family:'Josefin Sans',sans-serif;font-size:.9rem;color:var(--c-text)">{{ appt.kit.name }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--c-text-2);margin-left:.5rem">{{ appt.kit.price_formatted }}</span>
+                {% elif appt.service %}
+                <span style="font-family:'Josefin Sans',sans-serif;font-size:.9rem;color:var(--c-text)">{{ appt.service.name }}</span>
                 <span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--c-text-2);margin-left:.5rem">{{ appt.service.price_formatted }}</span>
+                {% else %}
+                <span style="font-family:'Josefin Sans',sans-serif;font-size:.9rem;color:var(--c-text)">—</span>
                 {% endif %}
               </div>
             </div>
@@ -101,6 +106,30 @@
       </div>
     </div>
 
+    {% if credit_items %}
+    <div class="clube-notice mb-3">
+      <div class="d-flex align-items-start gap-2">
+        <i class="bi bi-award text-accent fs-5 flex-shrink-0 mt-1"></i>
+        <div class="flex-grow-1">
+          <div class="fw-semibold small mb-1" style="font-family:'Josefin Sans',sans-serif;letter-spacing:.04em">
+            {% if credit_items | length > 1 %}
+              Kit Clube Athos — {{ credit_items | length }} créditos utilizados
+            {% else %}
+              1 crédito Clube Athos utilizado
+            {% endif %}
+          </div>
+          {% for item in credit_items %}
+          <div class="text-muted" style="font-size:.75rem">
+            {{ item.service_name }} —
+            <span style="font-family:'JetBrains Mono',monospace">{{ item.remaining }}/{{ item.total }}</span>
+            restantes
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <div class="alert alert-warning d-flex gap-2 align-items-start py-2 px-3 mb-4" style="font-size:.78rem">
       <i class="bi bi-exclamation-triangle mt-1 flex-shrink-0"></i>
       <div>Chegue com alguns minutos de antecedência. Caso precise cancelar, entre em contato com a barbearia.</div>
@@ -152,6 +181,14 @@
   font-family: 'Josefin Sans', sans-serif;
   font-weight: 600; font-size: .95rem;
   letter-spacing: .06em; color: var(--c-text);
+}
+
+.clube-notice {
+  background: rgba(204,31,31,.06);
+  border: 1px solid rgba(204,31,31,.25);
+  border-radius: 4px;
+  padding: 14px 16px;
+  animation: fadeInDown .4s ease .3s both;
 }
 </style>
 {% endblock %}

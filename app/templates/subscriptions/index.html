@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Clube Athos — Assinaturas{% endblock %}
+{% block page_title %}Clube Athos{% endblock %}
+
+{% block content %}
+
+<!-- ── Breadcrumb ─────────────────────────────────────── -->
+<nav class="mb-3 mt-2" aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item active text-muted">Assinaturas</li>
+  </ol>
+</nav>
+
+<!-- ── Stats ──────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-gold-soft"><i class="bi bi-award text-accent fs-5"></i></div>
+      <div class="stat-value">{{ summary.active }}</div>
+      <div class="stat-label">Ativas</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(255,193,7,.1)">
+        <i class="bi bi-exclamation-circle text-warning fs-5"></i>
+      </div>
+      <div class="stat-value">{{ summary.expiring }}</div>
+      <div class="stat-label">Vencem em 3 dias</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(108,117,125,.1)">
+        <i class="bi bi-hourglass-bottom text-secondary fs-5"></i>
+      </div>
+      <div class="stat-value">{{ summary.expired }}</div>
+      <div class="stat-label">Vencidas</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-gold-soft"><i class="bi bi-people text-accent fs-5"></i></div>
+      <div class="stat-value">{{ summary.total }}</div>
+      <div class="stat-label">Total histórico</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Filtros + Ação ─────────────────────────────────── -->
+<div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('subscriptions.index') }}"
+       class="filter-chip {% if not status_filter %}active{% endif %}">
+      Todos
+    </a>
+    <a href="{{ url_for('subscriptions.index', status='active') }}"
+       class="filter-chip {% if status_filter == 'active' %}active{% endif %}">
+      Ativas
+    </a>
+    <a href="{{ url_for('subscriptions.index', status='expiring') }}"
+       class="filter-chip {% if status_filter == 'expiring' %}active{% endif %}">
+      Vencendo
+    </a>
+    <a href="{{ url_for('subscriptions.index', status='expired') }}"
+       class="filter-chip {% if status_filter == 'expired' %}active{% endif %}">
+      Vencidas
+    </a>
+    <a href="{{ url_for('subscriptions.index', status='cancelled') }}"
+       class="filter-chip {% if status_filter == 'cancelled' %}active{% endif %}">
+      Canceladas
+    </a>
+  </div>
+  <a href="{{ url_for('subscriptions.new') }}" class="btn btn-gold btn-sm">
+    <i class="bi bi-plus-circle me-1"></i>Nova assinatura
+  </a>
+</div>
+
+<!-- ── Tabela ─────────────────────────────────────────── -->
+<div class="card card-dark">
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Plano</th>
+          <th>Status</th>
+          <th>Vencimento</th>
+          <th>Créditos</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sub in subscriptions %}
+        <tr>
+          <td>
+            <div class="fw-semibold small">{{ sub.customer.name if sub.customer else '—' }}</div>
+            {% if sub.customer and sub.customer.cpf %}
+            <div class="text-muted" style="font-size:.72rem;font-family:'JetBrains Mono',monospace">
+              {{ sub.customer.cpf }}
+            </div>
+            {% endif %}
+          </td>
+          <td class="small">{{ sub.plan.name if sub.plan else '—' }}</td>
+          <td>
+            <span class="badge-athos {{ sub.status_badge }}">{{ sub.status_label }}</span>
+            {% if sub.is_expiring_soon and sub.effective_status == 'active' %}
+            <span class="badge bg-warning bg-opacity-20 text-warning border border-warning border-opacity-25 ms-1"
+                  style="font-size:.65rem">
+              <i class="bi bi-clock me-1"></i>{{ sub.days_remaining }}d
+            </span>
+            {% endif %}
+          </td>
+          <td class="small" style="font-family:'JetBrains Mono',monospace">
+            {{ sub.end_date.strftime('%d/%m/%Y') }}
+          </td>
+          <td>
+            {% for c in sub.credits_summary() %}
+            <div class="small" style="white-space:nowrap">
+              <span class="text-muted" style="font-size:.7rem">{{ c.service_name }}</span>
+              <span class="ms-1 {% if c.remaining > 0 %}text-accent{% else %}text-muted{% endif %}"
+                    style="font-family:'JetBrains Mono',monospace;font-size:.75rem">
+                {{ c.remaining }}/{{ c.total }}
+              </span>
+            </div>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endfor %}
+          </td>
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{{ url_for('subscriptions.detail', sub_id=sub.id) }}"
+                 class="btn btn-sm btn-outline-secondary" title="Detalhes">
+                <i class="bi bi-eye"></i>
+              </a>
+              {% if sub.effective_status != 'cancelled' %}
+              <form method="POST" action="{{ url_for('subscriptions.renew', sub_id=sub.id) }}"
+                    class="d-inline"
+                    onsubmit="return confirm('Renovar assinatura de {{ sub.customer.name if sub.customer else '' }}? Créditos serão recarregados.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-gold" title="Renovar">
+                  <i class="bi bi-arrow-repeat"></i>
+                </button>
+              </form>
+              <form method="POST" action="{{ url_for('subscriptions.cancel', sub_id=sub.id) }}"
+                    class="d-inline"
+                    onsubmit="return confirm('Cancelar esta assinatura?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancelar">
+                  <i class="bi bi-x-circle"></i>
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-5">
+            <i class="bi bi-award d-block fs-2 mb-2 opacity-25"></i>
+            Nenhuma assinatura encontrada.
+            <br>
+            <a href="{{ url_for('subscriptions.new') }}" class="text-accent small mt-1 d-inline-block">
+              Criar primeira assinatura
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.filter-chip {
+  display: inline-flex; align-items: center;
+  padding: 4px 12px; border-radius: 2px;
+  border: 1px solid var(--c-border);
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: .72rem; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase;
+  color: var(--c-text-muted); text-decoration: none;
+  transition: border-color .12s, color .12s;
+}
+.filter-chip:hover { border-color: var(--c-text-2); color: var(--c-text-2); }
+.filter-chip.active { border-color: var(--c-accent); color: var(--c-accent); }
+.btn-outline-gold {
+  border-color: var(--c-accent); color: var(--c-accent);
+}
+.btn-outline-gold:hover {
+  background: var(--c-accent); color: #0a0a0a;
+}
+</style>
+{% endblock %}

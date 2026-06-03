@@ -184,7 +184,143 @@
     </div>
   </div>
 
+
+<!-- ── Exceções de Agenda ──────────────────────────────── -->
+<div class="card card-dark mt-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="fw-bold mb-0">
+      <i class="bi bi-calendar-event text-accent me-2"></i>Exceções de Agenda
+      <span class="text-muted small ms-2 fw-normal">(próximos 60 dias)</span>
+    </h6>
+    <button type="button" class="btn btn-sm btn-outline-gold"
+            data-bs-toggle="modal" data-bs-target="#addExcModal">
+      <i class="bi bi-plus me-1"></i>Adicionar
+    </button>
+  </div>
+
+  {% if exceptions %}
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Tipo</th>
+          <th>Horário</th>
+          <th>Motivo</th>
+          <th class="text-end">Ação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for exc in exceptions %}
+        <tr>
+          <td class="fw-semibold small text-accent"
+              style="font-family:'JetBrains Mono',monospace">
+            {{ exc.date.strftime('%d/%m/%Y') }}
+          </td>
+          <td>
+            <span class="badge-athos {{ exc.type_badge }}">{{ exc.type_label }}</span>
+          </td>
+          <td class="small text-muted" style="font-family:'JetBrains Mono',monospace">
+            {{ exc.hours_str if exc.hours_str != '—' else '—' }}
+          </td>
+          <td class="small text-muted">{{ exc.reason or '—' }}</td>
+          <td class="text-end">
+            <form method="POST"
+                  action="{{ url_for('barbers.remove_exception', barber_id=barber.id, exc_id=exc.id) }}"
+                  class="d-inline"
+                  onsubmit="return confirm('Remover exceção de {{ exc.date.strftime('%d/%m/%Y') }}?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-4 text-muted small">
+    <i class="bi bi-calendar-check d-block fs-3 mb-2 opacity-25"></i>
+    Nenhuma exceção cadastrada nos próximos 60 dias.
+  </div>
+  {% endif %}
 </div>
+
+<!-- ── Modal: Adicionar exceção ──────────────────────── -->
+<div class="modal fade" id="addExcModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background:var(--c-bg-2);border:1px solid var(--c-border)">
+      <form method="POST" action="{{ url_for('barbers.add_exception', barber_id=barber.id) }}"
+            novalidate id="excForm">
+        {{ exc_form.hidden_tag() }}
+        <div class="modal-header" style="border-color:var(--c-border)">
+          <h6 class="modal-title fw-bold">
+            <i class="bi bi-calendar-event text-accent me-2"></i>Adicionar Exceção
+          </h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Data <span class="text-danger">*</span></label>
+              {{ exc_form.date(
+                  class="form-control bg-dark border-secondary text-light",
+                  min=today.isoformat()
+              ) }}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Tipo <span class="text-danger">*</span></label>
+              {{ exc_form.exception_type(
+                  class="form-select bg-dark border-secondary text-light",
+                  id="excType"
+              ) }}
+            </div>
+
+            <div id="customHoursRow" class="col-12" style="display:none">
+              <div class="row g-3">
+                <div class="col-6">
+                  <label class="form-label fw-semibold small">Início</label>
+                  {{ exc_form.start_time(
+                      class="form-control bg-dark border-secondary text-light",
+                      placeholder="09:00"
+                  ) }}
+                </div>
+                <div class="col-6">
+                  <label class="form-label fw-semibold small">Fim</label>
+                  {{ exc_form.end_time(
+                      class="form-control bg-dark border-secondary text-light",
+                      placeholder="21:00"
+                  ) }}
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Motivo (opcional)</label>
+              {{ exc_form.reason(
+                  class="form-control bg-dark border-secondary text-light",
+                  placeholder="Ex: Feriado, Evento, Viagem..."
+              ) }}
+            </div>
+
+          </div>
+        </div>
+        <div class="modal-footer" style="border-color:var(--c-border)">
+          <button type="button" class="btn btn-outline-secondary btn-sm"
+                  data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-gold btn-sm">
+            <i class="bi bi-check-circle me-1"></i>Salvar exceção
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_css %}
@@ -230,9 +366,29 @@
 /* Table */
 .list-group-item:last-child { border-bottom: 0 !important; }
 
+/* Exception form */
+.btn-outline-gold { border-color: var(--c-accent); color: var(--c-accent); }
+.btn-outline-gold:hover { background: var(--c-accent); color: #0a0a0a; }
+
 @media (max-width: 576px) {
   .hero-body { flex-direction: column; align-items: center; text-align: center; }
   .hero-actions { align-items: center; flex-direction: row; justify-content: center; }
 }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const excType = document.getElementById('excType');
+const customHoursRow = document.getElementById('customHoursRow');
+function toggleCustomHours() {
+  if (excType && customHoursRow) {
+    customHoursRow.style.display = excType.value === 'custom_hours' ? 'block' : 'none';
+  }
+}
+if (excType) {
+  excType.addEventListener('change', toggleCustomHours);
+  toggleCustomHours();
+}
+</script>
 {% endblock %}

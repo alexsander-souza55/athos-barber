@@ -28,6 +28,7 @@ class Appointment(db.Model):
     customer_id = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=False)
     barber_id = db.Column(db.Integer, db.ForeignKey("barbers.id"), nullable=False)
     service_id = db.Column(db.Integer, db.ForeignKey("services.id"), nullable=False)
+    kit_id = db.Column(db.Integer, db.ForeignKey("service_kit.id"), nullable=True)
     scheduled_date = db.Column(db.Date, nullable=False)
     scheduled_time = db.Column(db.Time, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="pending")
@@ -38,6 +39,8 @@ class Appointment(db.Model):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+
+    kit = db.relationship("ServiceKit", foreign_keys=[kit_id])
 
     @property
     def status_label(self) -> str:
@@ -52,12 +55,20 @@ class Appointment(db.Model):
         return f"{self.scheduled_date.strftime('%d/%m/%Y')} às {self.scheduled_time.strftime('%H:%M')}"
 
     @property
+    def effective_duration_minutes(self) -> int:
+        """Duração real: kit total se for kit, senão duração do serviço."""
+        if self.kit_id and self.kit:
+            return self.kit.total_duration_minutes
+        if self.service:
+            return self.service.duration_minutes
+        return 60
+
+    @property
     def end_time(self):
-        """Horário de término calculado a partir da duração do serviço."""
-        if self.service and self.scheduled_time and self.scheduled_date:
+        if self.scheduled_time and self.scheduled_date:
             from datetime import datetime, timedelta
             dt = datetime.combine(self.scheduled_date, self.scheduled_time)
-            return (dt + timedelta(minutes=self.service.duration_minutes)).time()
+            return (dt + timedelta(minutes=self.effective_duration_minutes)).time()
         return None
 
     @property

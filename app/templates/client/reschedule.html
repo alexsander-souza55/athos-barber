@@ -17,13 +17,21 @@
       <div class="original-card-body">
         <div>
           <span class="appt-label">Serviço</span>
-          <span class="appt-value">{{ appt.service.name if appt.service else '—' }}
-            {% if appt.service %}
+          {% if appt.kit %}
+          <span class="appt-value">{{ appt.kit.name }}
+            <span style="font-family:'JetBrains Mono',monospace;color:var(--c-white)">
+              · {{ appt.kit.price_formatted }}
+            </span>
+          </span>
+          {% elif appt.service %}
+          <span class="appt-value">{{ appt.service.name }}
             <span style="font-family:'JetBrains Mono',monospace;color:var(--c-white)">
               · {{ appt.service.price_formatted }}
             </span>
-            {% endif %}
           </span>
+          {% else %}
+          <span class="appt-value">—</span>
+          {% endif %}
         </div>
         <div>
           <span class="appt-label">Data/Hora atual</span>
@@ -241,8 +249,9 @@
 
 {% block extra_js %}
 <script>
-const SERVICE_ID  = {{ appt.service_id }};
-const EXCLUDE_ID  = {{ appt.id }};
+const SERVICE_ID = {{ appt.service_id }};
+const KIT_ID     = {{ appt.kit_id or 'null' }};
+const EXCLUDE_ID = {{ appt.id }};
 
 let selectedBarberId = null;
 let selectedDate     = '';
@@ -277,9 +286,8 @@ document.querySelectorAll('.opt-card-barber').forEach(card => {
     unlockStep('step_date');
     updateBtn();
   });
-  // Preselect
-  if (this.dataset.preselect) {
-    this.click();
+  if (card.dataset.preselect) {
+    card.click();
   }
 });
 
@@ -323,7 +331,10 @@ function loadSlots() {
   spin.style.display = 'block';
   empty.style.display = 'none';
 
-  fetch(`/client/slots?barber_id=${selectedBarberId}&service_id=${SERVICE_ID}&date=${selectedDate}&exclude_id=${EXCLUDE_ID}`)
+  const slotsParam = KIT_ID
+    ? `kit_id=${KIT_ID}`
+    : `service_id=${SERVICE_ID}`;
+  fetch(`/client/slots?barber_id=${selectedBarberId}&${slotsParam}&date=${selectedDate}&exclude_id=${EXCLUDE_ID}`)
     .then(r => r.json())
     .then(data => {
       spin.style.display = 'none';
