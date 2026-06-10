@@ -1,7 +1,7 @@
 import multiprocessing
 
 # ── Binding ───────────────────────────────────────────────────────────────────
-bind = "127.0.0.1:8000"
+bind = "127.0.0.1:8001"
 
 # ── Workers ───────────────────────────────────────────────────────────────────
 # Fórmula recomendada pelo Gunicorn: (2 × CPUs) + 1
@@ -19,12 +19,12 @@ max_requests_jitter = 100
 preload_app = True
 
 # ── Logs ──────────────────────────────────────────────────────────────────────
-accesslog = "/var/www/barberhub/logs/gunicorn-access.log"
-errorlog  = "/var/www/barberhub/logs/gunicorn-error.log"
+accesslog = "/var/www/athos/logs/gunicorn-access.log"
+errorlog  = "/var/www/athos/logs/gunicorn-error.log"
 loglevel  = "warning"
 capture_output = True
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" %(D)sµs'
 
 # ── Processo ──────────────────────────────────────────────────────────────────
-proc_name = "barberhub"
-pidfile   = "/var/www/barberhub/barberhub.pid"
+proc_name = "athos"
+pidfile   = "/var/www/athos/athos.pid"
