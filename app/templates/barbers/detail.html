@@ -45,6 +45,9 @@
         {% if barber.work_hours_str != '—' %}
         <span><i class="bi bi-clock me-1 text-accent"></i>{{ barber.work_hours_str }}</span>
         {% endif %}
+        {% if barber.lunch_str %}
+        <span><i class="bi bi-cup-hot me-1"></i>Almoço: {{ barber.lunch_str }}</span>
+        {% endif %}
         <span><i class="bi bi-calendar-plus me-1"></i>Desde {{ barber.created_at.strftime('%m/%Y') }}</span>
         {% if barber.user %}
         <span><i class="bi bi-person me-1"></i>@{{ barber.user.username }}</span>

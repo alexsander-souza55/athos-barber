@@ -129,7 +129,7 @@
               </label>
               {{ form.scheduled_time(
                   class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.scheduled_time.errors else ""),
-                  type="time", step="1800", id="timeInput",
+                  type="time", step="3600", id="timeInput",
                   placeholder="09:00"
               ) }}
               {% for e in form.scheduled_time.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}

@@ -49,6 +49,8 @@ class CreateBarberForm(FlaskForm):
     # — Horários ——————————————————————————————————————————
     work_start_time = StringField("Início do atendimento", validators=[Optional()])
     work_end_time = StringField("Fim do atendimento", validators=[Optional()])
+    lunch_start = StringField("Início do almoço", validators=[Optional()])
+    lunch_end   = StringField("Fim do almoço", validators=[Optional()])
 
     # — Foto ——————————————————————————————————————————————
     photo = FileField(
@@ -101,6 +103,31 @@ class CreateBarberForm(FlaskForm):
             except ValueError:
                 pass
 
+    def validate_lunch_start(self, field):
+        if not field.data:
+            return
+        try:
+            _parse_time(field.data)
+        except ValueError:
+            raise ValidationError("Use o formato HH:MM  (ex: 12:00).")
+
+    def validate_lunch_end(self, field):
+        if not field.data:
+            if self.lunch_start.data:
+                raise ValidationError("Informe o fim do almoço.")
+            return
+        try:
+            end = _parse_time(field.data)
+        except ValueError:
+            raise ValidationError("Use o formato HH:MM  (ex: 13:00).")
+        if self.lunch_start.data:
+            try:
+                start = _parse_time(self.lunch_start.data)
+                if end <= start:
+                    raise ValidationError("Fim do almoço deve ser posterior ao início.")
+            except ValueError:
+                pass
+
 
 # ── Formulário de edição (somente perfil, sem credenciais) ────────────────────
 class EditBarberForm(FlaskForm):
@@ -116,6 +143,8 @@ class EditBarberForm(FlaskForm):
 
     work_start_time = StringField("Início do atendimento", validators=[Optional()])
     work_end_time = StringField("Fim do atendimento", validators=[Optional()])
+    lunch_start = StringField("Início do almoço", validators=[Optional()])
+    lunch_end   = StringField("Fim do almoço", validators=[Optional()])
 
     photo = FileField(
         "Nova foto",
@@ -161,6 +190,31 @@ class EditBarberForm(FlaskForm):
                 start = _parse_time(self.work_start_time.data)
                 if end <= start:
                     raise ValidationError("Horário de fim deve ser posterior ao de início.")
+            except ValueError:
+                pass
+
+    def validate_lunch_start(self, field):
+        if not field.data:
+            return
+        try:
+            _parse_time(field.data)
+        except ValueError:
+            raise ValidationError("Use o formato HH:MM  (ex: 12:00).")
+
+    def validate_lunch_end(self, field):
+        if not field.data:
+            if self.lunch_start.data:
+                raise ValidationError("Informe o fim do almoço.")
+            return
+        try:
+            end = _parse_time(field.data)
+        except ValueError:
+            raise ValidationError("Use o formato HH:MM  (ex: 13:00).")
+        if self.lunch_start.data:
+            try:
+                start = _parse_time(self.lunch_start.data)
+                if end <= start:
+                    raise ValidationError("Fim do almoço deve ser posterior ao início.")
             except ValueError:
                 pass
 

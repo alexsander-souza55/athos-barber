@@ -20,6 +20,8 @@ class Barber(db.Model):
     # Horário de atendimento
     work_start_time = db.Column(db.Time, nullable=True)
     work_end_time = db.Column(db.Time, nullable=True)
+    lunch_start = db.Column(db.Time, nullable=True)
+    lunch_end   = db.Column(db.Time, nullable=True)
 
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
@@ -68,6 +70,23 @@ class Barber(db.Model):
     @property
     def work_end_str(self) -> str:
         return self.work_end_time.strftime("%H:%M") if self.work_end_time else ""
+
+    @property
+    def lunch_start_str(self) -> str:
+        return self.lunch_start.strftime("%H:%M") if self.lunch_start else ""
+
+    @property
+    def lunch_end_str(self) -> str:
+        return self.lunch_end.strftime("%H:%M") if self.lunch_end else ""
+
+    @property
+    def lunch_str(self) -> str:
+        if self.lunch_start and self.lunch_end:
+            return (
+                f"{self.lunch_start.strftime('%H:%M')} "
+                f"– {self.lunch_end.strftime('%H:%M')}"
+            )
+        return ""
 
     # ── Stats de agendamentos ────────────────────────────────
     @property

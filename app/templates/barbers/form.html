@@ -208,6 +208,44 @@
                     Atendimento: <strong id="hoursPreviewText"></strong>
                   </div>
                 </div>
+
+                <!-- Intervalo de almoço -->
+                <div class="col-12 mt-2">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="lunchToggle"
+                           {% if is_edit and barber.lunch_start %}checked{% endif %}>
+                    <label class="form-check-label small fw-semibold" for="lunchToggle">
+                      <i class="bi bi-cup-hot me-1 text-muted"></i>Configurar intervalo de almoço
+                    </label>
+                  </div>
+                </div>
+
+                <div id="lunchRow" class="col-12"
+                     style="display:{% if is_edit and barber.lunch_start %}block{% else %}none{% endif %}">
+                  <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                      <label class="form-label fw-semibold small">{{ form.lunch_start.label.text }}</label>
+                      {{ form.lunch_start(
+                          class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.lunch_start.errors else ""),
+                          type="time",
+                          id="lunchStart"
+                      ) }}
+                      {% for e in form.lunch_start.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-auto d-flex align-items-end pb-1">
+                      <span class="text-muted fs-5">—</span>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label fw-semibold small">{{ form.lunch_end.label.text }}</label>
+                      {{ form.lunch_end(
+                          class="form-control bg-dark border-secondary text-light" + (" is-invalid" if form.lunch_end.errors else ""),
+                          type="time",
+                          id="lunchEnd"
+                      ) }}
+                      {% for e in form.lunch_end.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -323,5 +361,21 @@ function updateHoursPreview() {
 if (startTime) startTime.addEventListener("change", updateHoursPreview);
 if (endTime)   endTime.addEventListener("change", updateHoursPreview);
 updateHoursPreview(); // aplica ao carregar
+
+// ── Toggle intervalo de almoço ───────────────────────────
+const lunchToggle = document.getElementById("lunchToggle");
+const lunchRow    = document.getElementById("lunchRow");
+const lunchStart  = document.getElementById("lunchStart");
+const lunchEnd    = document.getElementById("lunchEnd");
+
+if (lunchToggle && lunchRow) {
+  lunchToggle.addEventListener("change", function () {
+    lunchRow.style.display = this.checked ? "block" : "none";
+    if (!this.checked) {
+      if (lunchStart) lunchStart.value = "";
+      if (lunchEnd)   lunchEnd.value   = "";
+    }
+  });
+}
 </script>
 {% endblock %}

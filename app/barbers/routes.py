@@ -148,8 +148,10 @@ def new():
             photo_path = save_upload(photo_file, subfolder="barbers")
 
         # 3. Horários
-        work_start = _parse_time_safe(form.work_start_time.data)
-        work_end   = _parse_time_safe(form.work_end_time.data)
+        work_start  = _parse_time_safe(form.work_start_time.data)
+        work_end    = _parse_time_safe(form.work_end_time.data)
+        lunch_start = _parse_time_safe(form.lunch_start.data)
+        lunch_end   = _parse_time_safe(form.lunch_end.data)
 
         if work_start and work_end and work_start >= work_end:
             flash("O horário de início deve ser anterior ao horário de término.", "danger")
@@ -167,6 +169,8 @@ def new():
             photo=photo_path,
             work_start_time=work_start,
             work_end_time=work_end,
+            lunch_start=lunch_start,
+            lunch_end=lunch_end,
         )
         db.session.add(barber)
         try:
@@ -198,6 +202,8 @@ def edit(barber_id: int):
         form.bio.data = barber.bio or ""
         form.work_start_time.data = barber.work_start_str
         form.work_end_time.data = barber.work_end_str
+        form.lunch_start.data = barber.lunch_start_str
+        form.lunch_end.data   = barber.lunch_end_str
         form.is_active.data = barber.is_active
 
     if form.validate_on_submit():
@@ -207,8 +213,10 @@ def edit(barber_id: int):
         barber.whatsapp = _re.sub(r'\D', '', form.whatsapp.data or '') or None
         barber.specialty = form.specialty.data.strip() or None
         barber.bio = form.bio.data.strip() or None
-        work_start = _parse_time_safe(form.work_start_time.data)
-        work_end   = _parse_time_safe(form.work_end_time.data)
+        work_start  = _parse_time_safe(form.work_start_time.data)
+        work_end    = _parse_time_safe(form.work_end_time.data)
+        lunch_start = _parse_time_safe(form.lunch_start.data)
+        lunch_end   = _parse_time_safe(form.lunch_end.data)
 
         if work_start and work_end and work_start >= work_end:
             flash("O horário de início deve ser anterior ao horário de término.", "danger")
@@ -216,6 +224,8 @@ def edit(barber_id: int):
 
         barber.work_start_time = work_start
         barber.work_end_time = work_end
+        barber.lunch_start = lunch_start
+        barber.lunch_end   = lunch_end
         barber.is_active = form.is_active.data
 
         # Gerenciamento de foto

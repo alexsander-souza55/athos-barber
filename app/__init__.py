@@ -162,8 +162,10 @@ def _ensure_schema(app: Flask) -> None:
         db.create_all()
         inspector = inspect(db.engine)
         migrations = [
-            ("customers", "cpf",      "VARCHAR(14)"),
-            ("barbers",   "whatsapp", "VARCHAR(20)"),
+            ("customers", "cpf",          "VARCHAR(14)"),
+            ("barbers",   "whatsapp",     "VARCHAR(20)"),
+            ("barbers",   "lunch_start",  "TIME"),
+            ("barbers",   "lunch_end",    "TIME"),
         ]
         with db.engine.connect() as conn:
             for table, col, col_def in migrations:

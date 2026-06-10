@@ -30,7 +30,7 @@ def _now_local() -> datetime:
     return datetime.now(ZoneInfo(tz_name)).replace(tzinfo=None)
 
 
-SLOT_INTERVAL_MINUTES = 30
+SLOT_INTERVAL_MINUTES = 60
 DEFAULT_WORK_START = time(8, 0)
 DEFAULT_WORK_END = time(18, 0)
 
@@ -116,6 +116,12 @@ def get_available_slots(
         a_start = datetime.combine(target_date, appt.scheduled_time)
         blocked.append((a_start, a_start + timedelta(minutes=dur)))
 
+    if barber.lunch_start and barber.lunch_end:
+        blocked.append((
+            datetime.combine(target_date, barber.lunch_start),
+            datetime.combine(target_date, barber.lunch_end),
+        ))
+
     available: List[time] = []
     cursor = datetime.combine(target_date, work_start)
     deadline = datetime.combine(target_date, work_end)
@@ -179,6 +185,12 @@ def is_slot_available(
 
     if slot_start < datetime.combine(target_date, work_start) or slot_end > deadline:
         return False
+
+    if barber.lunch_start and barber.lunch_end:
+        lunch_s = datetime.combine(target_date, barber.lunch_start)
+        lunch_e = datetime.combine(target_date, barber.lunch_end)
+        if slot_start < lunch_e and slot_end > lunch_s:
+            return False
 
     existing = (
         Appointment.query
