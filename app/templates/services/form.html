@@ -92,8 +92,8 @@
               {% for e in form.description.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
             </div>
 
-            <!-- Status — somente no edit -->
-            {% if is_edit %}
+            <!-- Status — somente no edit e apenas para admin -->
+            {% if is_edit and current_user.is_admin %}
             <div class="col-12">
               <hr class="border-secondary">
               <div class="form-check form-switch d-flex align-items-center gap-2">
@@ -109,6 +109,55 @@
             {% endif %}
 
           </div>
+        </div>
+      </div>
+
+      <!-- ═ Serviço exclusivo ══════════════════════════════ -->
+      <div class="card card-dark mb-4" id="exclusiveCard">
+        <div class="card-header">
+          <h6 class="fw-bold mb-0">
+            <i class="bi bi-person-lock text-accent me-2"></i>Exclusividade
+          </h6>
+        </div>
+        <div class="card-body p-4">
+
+          <!-- Toggle -->
+          <div class="exclusive-toggle-wrap" id="exclusiveToggleWrap">
+            <div class="exclusive-toggle-inner" id="exclusiveToggleBtn">
+              <span class="exclusive-toggle-knob" id="exclusiveKnob"></span>
+            </div>
+            {{ form.is_exclusive(id="isExclusiveInput", class="d-none") }}
+            <label for="isExclusiveInput" class="fw-semibold small mb-0" style="cursor:pointer;user-select:none">
+              Apenas eu realizo este serviço
+            </label>
+          </div>
+          <div class="form-text text-muted mt-2">
+            Quando ativo, o barbeiro fica fixo no agendamento — o cliente não pode trocar.
+          </div>
+
+          <!-- Conteúdo expandido -->
+          <div id="exclusiveDetails" style="display:none;margin-top:1rem">
+            <hr class="border-secondary">
+
+            {% if current_user.is_admin %}
+            <!-- Admin: seleciona o barbeiro -->
+            <div class="mt-2">
+              <label class="form-label fw-semibold small">Barbeiro exclusivo</label>
+              {{ form.assigned_barber_id(
+                  class="form-select bg-dark border-secondary text-light",
+                  id="assignedBarberSelect"
+              ) }}
+              <div class="form-text text-muted">Selecione o barbeiro que realiza este serviço.</div>
+            </div>
+            {% else %}
+            <!-- Barbeiro: vinculado automaticamente -->
+            <div class="exclusive-self-badge">
+              <i class="bi bi-lock-fill me-2" style="font-size:.8rem"></i>
+              Serviço vinculado a você
+            </div>
+            {% endif %}
+          </div>
+
         </div>
       </div>
 
@@ -130,6 +179,39 @@
 <style>
 .breadcrumb-dark .breadcrumb-item.active { color: #6b7280; }
 .breadcrumb-dark .breadcrumb-item + .breadcrumb-item::before { color: #4b5563; }
+
+/* Toggle exclusivo */
+.exclusive-toggle-wrap {
+  display: flex; align-items: center; gap: 12px; cursor: pointer;
+}
+.exclusive-toggle-inner {
+  width: 44px; height: 24px; border-radius: 12px;
+  background: #2a2a2a; border: 1.5px solid #444;
+  position: relative; transition: background .2s, border-color .2s;
+  flex-shrink: 0; cursor: pointer;
+}
+.exclusive-toggle-inner.is-on {
+  background: rgba(204,31,31,.15);
+  border-color: #cc1f1f;
+}
+.exclusive-toggle-knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #555; transition: transform .2s, background .2s;
+}
+.exclusive-toggle-inner.is-on .exclusive-toggle-knob {
+  transform: translateX(20px);
+  background: #cc1f1f;
+}
+.exclusive-self-badge {
+  display: inline-flex; align-items: center;
+  padding: 6px 14px; border-radius: 2px;
+  border: 1px solid rgba(204,31,31,.4);
+  background: rgba(204,31,31,.07);
+  color: #cc1f1f;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .78rem;
+}
 </style>
 {% endblock %}
 
@@ -159,5 +241,35 @@ if (durationInput) {
   durationInput.addEventListener("input", updateDurationPreview);
   updateDurationPreview();
 }
+
+// ── Toggle exclusivo ─────────────────────────────────────
+const toggleBtn      = document.getElementById("exclusiveToggleBtn");
+const hiddenCheckbox = document.getElementById("isExclusiveInput");
+const details        = document.getElementById("exclusiveDetails");
+
+function applyExclusiveState(on) {
+  if (on) {
+    toggleBtn.classList.add("is-on");
+    details.style.display = "block";
+  } else {
+    toggleBtn.classList.remove("is-on");
+    details.style.display = "none";
+  }
+  hiddenCheckbox.checked = on;
+}
+
+// Inicializa com valor atual do checkbox
+applyExclusiveState(hiddenCheckbox.checked);
+
+if (toggleBtn) {
+  toggleBtn.addEventListener("click", function () {
+    applyExclusiveState(!hiddenCheckbox.checked);
+  });
+}
+// Também permite clicar na label
+document.querySelector("label[for='isExclusiveInput']")?.addEventListener("click", function(e) {
+  e.preventDefault();
+  applyExclusiveState(!hiddenCheckbox.checked);
+});
 </script>
 {% endblock %}

@@ -136,12 +136,18 @@
                      data-id="{{ s.id }}"
                      data-label="{{ s.name }}"
                      data-duration="{{ s.duration_minutes }}"
-                     data-price="{{ s.price_formatted }}">
+                     data-price="{{ s.price_formatted }}"
+                     data-assigned-barber="{{ s.assigned_barber_id or '' }}">
                   <div class="opt-name">{{ s.name }}</div>
                   <div class="opt-price">{{ s.price_formatted }}</div>
                   <div class="opt-info">
                     <i class="bi bi-clock me-1"></i>{{ s.duration_formatted }}
                   </div>
+                  {% if s.assigned_barber_id and s.assigned_barber %}
+                  <div class="opt-info" style="color:#cc1f1f;font-family:'JetBrains Mono',monospace;font-size:.62rem;margin-top:2px">
+                    <i class="bi bi-lock-fill me-1"></i>{{ s.assigned_barber.name }}
+                  </div>
+                  {% endif %}
                   {% if s.description %}
                   <div class="opt-desc">{{ s.description | truncate(45) }}</div>
                   {% endif %}
@@ -1079,6 +1085,23 @@ document.querySelectorAll('[data-step="service"]').forEach(card => {
     inpService.value = state.serviceId;
     markDone(1, `${state.serviceName} — ${state.servicePrice}`);
     if (changed) resetFrom(2);
+
+    // Se o serviço tem barbeiro exclusivo, pula o passo 2 auto-selecionando
+    const assignedBarber = this.dataset.assignedBarber;
+    if (assignedBarber) {
+      const barberCard = document.querySelector(`[data-step="barber"][data-id="${assignedBarber}"]`);
+      if (barberCard) {
+        document.querySelectorAll('[data-step="barber"]').forEach(c => c.classList.remove('selected'));
+        barberCard.classList.add('selected');
+        state.barberId = assignedBarber;
+        state.barberName = barberCard.dataset.label;
+        inpBarber.value = assignedBarber;
+        markDone(2, state.barberName +
+          ' <span style="font-family:\'JetBrains Mono\',monospace;font-size:.65rem;color:#cc1f1f;margin-left:4px"><i class="bi bi-lock-fill"></i> Exclusivo</span>');
+        unlockStep(3);
+        return;
+      }
+    }
     unlockStep(2);
   });
 });

@@ -1,3 +1,5 @@
+import uuid
+import calendar as _calendar
 from datetime import date, datetime, timezone, timedelta
 from flask import (
     Blueprint, render_template, redirect, url_for,
@@ -83,6 +85,15 @@ def index():
 
 
 # ── Admin / Barber: Criar agendamento ────────────────────────────────────────
+def _add_months(d: date, months: int) -> date:
+    """Avança d por N meses, ajustando para último dia do mês se necessário."""
+    month = d.month - 1 + months
+    year = d.year + month // 12
+    month = month % 12 + 1
+    day = min(d.day, _calendar.monthrange(year, month)[1])
+    return d.replace(year=year, month=month, day=day)
+
+
 @appointments_bp.route("/new", methods=["GET", "POST"])
 @login_required
 def new():
@@ -103,6 +114,13 @@ def new():
     else:
         barbers = Barber.query.filter_by(is_active=True).order_by(Barber.name).all()
 
+    # Mapa service_id → assigned_barber_id para o JS travar o select
+    service_barber_map = {
+        s.id: s.assigned_barber_id
+        for s in services
+        if s.assigned_barber_id is not None
+    }
+
     form.customer_id.choices = [
         (c.id, f"{c.name}" + (f"  ·  {c.phone}" if c.phone else ""))
         for c in customers
@@ -121,19 +139,13 @@ def new():
         flash("Não há serviços nem kits ativos.", "warning")
 
     if form.validate_on_submit():
-        # Barber sempre agenda para si mesmo
-        barber_id_to_use = (
-            current_user.barber_profile.id
-            if current_user.is_barber and current_user.barber_profile
-            else form.barber_id.data
-        )
-
         kit_id_raw = request.form.get("kit_id", "").strip()
         kit_id = int(kit_id_raw) if kit_id_raw else None
         service_id = form.service_id.data or None
 
         sched_date = form.scheduled_date.data
         sched_time = datetime.strptime(form.scheduled_time.data.strip(), "%H:%M").time()
+        notes_val  = (form.notes.data or "").strip() or None
 
         kit = None
         if kit_id:
@@ -141,44 +153,94 @@ def new():
             if not kit:
                 flash("Kit inválido.", "danger")
                 return render_template("appointments/form.html", form=form,
-                                       barbers=barbers, services=services, kits=kits)
+                                       barbers=barbers, services=services, kits=kits,
+                                       service_barber_map=service_barber_map)
             service_id = kit.items[0].service_id if kit.items else service_id
 
         if not service_id:
             flash("Selecione um serviço ou kit.", "danger")
             return render_template("appointments/form.html", form=form,
-                                   barbers=barbers, services=services, kits=kits)
+                                   barbers=barbers, services=services, kits=kits,
+                                   service_barber_map=service_barber_map)
 
+        # Se o serviço tem barbeiro exclusivo, força esse barbeiro
+        svc_obj = Service.query.get(service_id)
+        if svc_obj and svc_obj.assigned_barber_id:
+            barber_id_to_use = svc_obj.assigned_barber_id
+        elif current_user.is_barber and current_user.barber_profile:
+            barber_id_to_use = current_user.barber_profile.id
+        else:
+            barber_id_to_use = form.barber_id.data
+
+        # Recorrência
+        is_recurring = request.form.get("is_recurring") == "1"
+        recurring_months = 0
+        if is_recurring:
+            try:
+                recurring_months = max(1, min(24, int(request.form.get("recurring_months", 1))))
+            except (ValueError, TypeError):
+                recurring_months = 1
+
+        # Verifica disponibilidade do slot inicial
         if not is_slot_available(barber_id_to_use, service_id, sched_date, sched_time,
                                  kit_id=kit_id):
             flash("Horário indisponível: o barbeiro já tem um agendamento neste intervalo.", "danger")
             return render_template("appointments/form.html", form=form,
-                                   barbers=barbers, services=services, kits=kits)
-
-        appt = Appointment(
-            customer_id=form.customer_id.data,
-            barber_id=barber_id_to_use,
-            service_id=service_id,
-            kit_id=kit_id,
-            scheduled_date=sched_date,
-            scheduled_time=sched_time,
-            notes=(form.notes.data or "").strip() or None,
-        )
-        db.session.add(appt)
-        db.session.flush()
+                                   barbers=barbers, services=services, kits=kits,
+                                   service_barber_map=service_barber_map)
 
         from app.subscriptions.service import consume_credit, consume_credit_kit
-        if kit:
-            consume_credit_kit(form.customer_id.data, kit, appt.id)
-        else:
-            consume_credit(form.customer_id.data, service_id, appt.id)
+
+        group_id = str(uuid.uuid4()) if is_recurring else None
+        total_months = recurring_months if is_recurring else 0
+        created_count = 0
+
+        for offset in range(total_months + 1):
+            current_date = _add_months(sched_date, offset) if offset > 0 else sched_date
+            if offset > 0 and not is_slot_available(
+                barber_id_to_use, service_id, current_date, sched_time, kit_id=kit_id
+            ):
+                continue  # pula meses com conflito silenciosamente
+
+            appt = Appointment(
+                customer_id=form.customer_id.data,
+                barber_id=barber_id_to_use,
+                service_id=service_id,
+                kit_id=kit_id,
+                scheduled_date=current_date,
+                scheduled_time=sched_time,
+                notes=notes_val,
+                is_recurring=is_recurring,
+                recurring_group_id=group_id,
+            )
+            db.session.add(appt)
+            db.session.flush()
+
+            if kit:
+                consume_credit_kit(form.customer_id.data, kit, appt.id)
+            else:
+                consume_credit(form.customer_id.data, service_id, appt.id)
+
+            created_count += 1
 
         db.session.commit()
-        flash("Agendamento criado com sucesso!", "success")
+
+        if is_recurring and created_count > 1:
+            customer = Customer.query.get(form.customer_id.data)
+            flash(
+                f"{created_count} agendamentos criados com sucesso para "
+                f"{customer.name if customer else 'o cliente'} — "
+                f"todo dia {sched_date.day} de cada mês, por {total_months} mês(es).",
+                "success",
+            )
+        else:
+            flash("Agendamento criado com sucesso!", "success")
+
         return redirect(url_for("appointments.index", date=str(sched_date)))
 
     return render_template("appointments/form.html", form=form,
-                           barbers=barbers, services=services, kits=kits)
+                           barbers=barbers, services=services, kits=kits,
+                           service_barber_map=service_barber_map)
 
 
 # ── Admin / Barber: Atualizar status ─────────────────────────────────────────

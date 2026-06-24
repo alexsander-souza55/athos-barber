@@ -55,6 +55,10 @@
        class="sidebar-link {% if request.endpoint == 'appointments.new' %}active{% endif %}">
       <i class="bi bi-calendar-plus"></i><span>Novo Agendamento</span>
     </a>
+    <a href="{{ url_for('services.index') }}"
+       class="sidebar-link {% if request.blueprint == 'services' %}active{% endif %}">
+      <i class="bi bi-scissors"></i><span>Serviços</span>
+    </a>
     {% endif %}
 
     {% if current_user.is_admin %}

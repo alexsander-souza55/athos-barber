@@ -176,7 +176,12 @@
 
           <!-- Serviço -->
           <td class="d-none d-lg-table-cell">
-            <div style="font-size:.85rem">{{ a.service.name if a.service else '—' }}</div>
+            <div style="font-size:.85rem" class="d-flex align-items-center gap-2">
+              {{ a.service.name if a.service else '—' }}
+              {% if a.is_recurring %}
+              <span class="badge-recurring" title="Parte de um agendamento recorrente">↺ Fixo</span>
+              {% endif %}
+            </div>
             {% if a.service %}
             <div class="text-accent" style="font-size:.7rem">{{ a.service.price_formatted }}</div>
             {% endif %}
@@ -288,6 +293,13 @@
 }
 .customer-appt-link:hover {
   text-decoration: underline; color: var(--c-text-2);
+}
+.badge-recurring {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 600;
+  color: #cc1f1f; border: 1px solid #cc1f1f;
+  border-radius: 2px; padding: 1px 4px;
+  white-space: nowrap; cursor: default;
 }
 </style>
 {% endblock %}

@@ -254,5 +254,36 @@ def seed_services():
         print()
 
 
+@app.cli.command("migrate")
+def migrate():
+    """Adiciona colunas novas ao banco existente (idempotente — seguro rodar várias vezes)."""
+    with app.app_context():
+        conn = db.engine.raw_connection()
+        cur = conn.cursor()
+        migrations = [
+            (
+                "services.assigned_barber_id",
+                "ALTER TABLE services ADD COLUMN assigned_barber_id INTEGER REFERENCES barbers(id)",
+            ),
+            (
+                "appointments.recurring_group_id",
+                "ALTER TABLE appointments ADD COLUMN recurring_group_id VARCHAR(36)",
+            ),
+            (
+                "appointments.is_recurring",
+                "ALTER TABLE appointments ADD COLUMN is_recurring BOOLEAN NOT NULL DEFAULT 0",
+            ),
+        ]
+        for label, sql in migrations:
+            try:
+                cur.execute(sql)
+                print(f"  + {label} adicionado")
+            except Exception:
+                print(f"  = {label} já existe (ignorado)")
+        conn.commit()
+        conn.close()
+        print("Migração concluída.")
+
+
 if __name__ == "__main__":
     app.run(debug=app.debug, host="0.0.0.0", port=5000)

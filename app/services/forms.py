@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, DecimalField, IntegerField, BooleanField
+from wtforms import StringField, TextAreaField, DecimalField, IntegerField, BooleanField, SelectField
 from wtforms.validators import DataRequired, Length, NumberRange, Optional, ValidationError
 
 
@@ -37,6 +37,13 @@ class ServiceForm(FlaskForm):
         ],
     )
     is_active = BooleanField("Serviço ativo")
+    is_exclusive = BooleanField("Apenas eu realizo este serviço")
+    assigned_barber_id = SelectField(
+        "Barbeiro exclusivo",
+        coerce=int,
+        choices=[],
+        validators=[Optional()],
+    )
 
     def __init__(self, service_id=None, *args, **kwargs):
         super().__init__(*args, **kwargs)

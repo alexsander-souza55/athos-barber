@@ -122,11 +122,21 @@
             </span>
           </td>
           <td class="text-end">
-            <div class="d-flex gap-1 justify-content-end">
+            <div class="d-flex gap-1 justify-content-end align-items-center">
+              {% if s.assigned_barber_id %}
+              <span class="exclusive-badge me-1" title="Exclusivo de {{ s.assigned_barber.name if s.assigned_barber else '?' }}">
+                <i class="bi bi-lock-fill me-1"></i>{{ s.assigned_barber.name if s.assigned_barber else '?' }}
+              </span>
+              {% endif %}
+
+              {% if current_user.is_admin or (current_user.is_barber and current_user.barber_profile and s.assigned_barber_id == current_user.barber_profile.id) %}
               <a href="{{ url_for('services.edit', service_id=s.id) }}"
                  class="btn btn-sm btn-outline-light" title="Editar">
                 <i class="bi bi-pencil"></i>
               </a>
+              {% endif %}
+
+              {% if current_user.is_admin %}
               <form method="POST" action="{{ url_for('services.toggle', service_id=s.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit"
@@ -140,6 +150,7 @@
                       title="Excluir">
                 <i class="bi bi-trash"></i>
               </button>
+              {% endif %}
             </div>
           </td>
         </tr>
@@ -231,5 +242,14 @@
 .badge-active   { background: rgba(46,125,79,.12);  color: #5db882; border: 1px solid rgba(46,125,79,.3); }
 .badge-inactive { background: rgba(85,85,80,.1);    color: #555550; border: 1px solid rgba(85,85,80,.3); }
 .small-value { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem !important; }
+.exclusive-badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 2px;
+  border: 1px solid rgba(204,31,31,.35);
+  background: rgba(204,31,31,.07);
+  color: #cc1f1f;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .65rem; white-space: nowrap;
+}
 </style>
 {% endblock %}

@@ -33,6 +33,8 @@ class Appointment(db.Model):
     scheduled_time = db.Column(db.Time, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="pending")
     notes = db.Column(db.Text, nullable=True)
+    is_recurring = db.Column(db.Boolean, nullable=False, default=False)
+    recurring_group_id = db.Column(db.String(36), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(
         db.DateTime,
