@@ -10,7 +10,11 @@
     <!-- Breadcrumb -->
     <nav class="mb-3" aria-label="breadcrumb">
       <ol class="breadcrumb breadcrumb-dark small">
+        {% if current_user.is_admin %}
         <li class="breadcrumb-item"><a href="{{ url_for('barbers.index') }}" class="text-accent">Barbeiros</a></li>
+        {% else %}
+        <li class="breadcrumb-item"><a href="{{ url_for('barbers.detail', barber_id=barber.id) }}" class="text-accent">Meu Perfil</a></li>
+        {% endif %}
         <li class="breadcrumb-item active">
           {% if is_edit %}{{ barber.name }}{% else %}Novo{% endif %}
         </li>
@@ -64,9 +68,9 @@
               </div>
               {% endif %}
 
-              {% if is_edit %}
+              {% if is_edit and current_user.is_admin %}
               <hr class="border-secondary">
-              <!-- Status (edit only) -->
+              <!-- Status (edit only, admin only) -->
               <div class="form-check form-switch d-flex align-items-center justify-content-center gap-2">
                 {{ form.is_active(class="form-check-input", role="switch", id="isActiveSwitch") }}
                 <label class="form-check-label small fw-semibold" for="isActiveSwitch">Barbeiro ativo</label>
@@ -259,7 +263,7 @@
             {% if is_edit %}
             <a href="{{ url_for('barbers.detail', barber_id=barber.id) }}"
                class="btn btn-outline-secondary">Cancelar</a>
-            {% else %}
+            {% elif current_user.is_admin %}
             <a href="{{ url_for('barbers.index') }}"
                class="btn btn-outline-secondary">Cancelar</a>
             {% endif %}

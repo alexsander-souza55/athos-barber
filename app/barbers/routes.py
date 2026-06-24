@@ -1,14 +1,14 @@
 from datetime import datetime, date
 from sqlalchemy import func
 from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.barber import Barber
 from app.models.user import User
 from app.models.appointment import Appointment
 from app.models.service import Service
 from app.barbers.forms import CreateBarberForm, EditBarberForm, ScheduleExceptionForm
-from app.utils.decorators import admin_required
+from app.utils.decorators import admin_required  # noqa: F401 (still used by other routes)
 from app.utils.helpers import save_upload, delete_upload, allowed_file
 
 barbers_bp = Blueprint("barbers", __name__)
@@ -50,8 +50,11 @@ def index():
 # ── Detalhe ───────────────────────────────────────────────────────────────────
 @barbers_bp.route("/<int:barber_id>")
 @login_required
-@admin_required
 def detail(barber_id: int):
+    if not _can_manage_exceptions(barber_id):
+        flash("Acesso negado.", "danger")
+        return redirect(url_for("dashboard.index"))
+
     barber = Barber.query.get_or_404(barber_id)
     today = date.today()
     month_start = today.replace(day=1)
@@ -189,8 +192,10 @@ def new():
 # ── Editar ────────────────────────────────────────────────────────────────────
 @barbers_bp.route("/<int:barber_id>/edit", methods=["GET", "POST"])
 @login_required
-@admin_required
 def edit(barber_id: int):
+    if not _can_manage_exceptions(barber_id):
+        flash("Acesso negado.", "danger")
+        return redirect(url_for("dashboard.index"))
     barber = Barber.query.get_or_404(barber_id)
     form = EditBarberForm(barber_id=barber_id)
 
@@ -226,7 +231,8 @@ def edit(barber_id: int):
         barber.work_end_time = work_end
         barber.lunch_start = lunch_start
         barber.lunch_end   = lunch_end
-        barber.is_active = form.is_active.data
+        if current_user.is_admin:
+            barber.is_active = form.is_active.data
 
         # Gerenciamento de foto
         if form.remove_photo.data and barber.photo:

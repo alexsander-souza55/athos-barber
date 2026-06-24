@@ -7,7 +7,9 @@
 <!-- ── Breadcrumb ─────────────────────────────────────── -->
 <nav class="mb-3 mt-2" aria-label="breadcrumb">
   <ol class="breadcrumb small">
+    {% if current_user.is_admin %}
     <li class="breadcrumb-item"><a href="{{ url_for('barbers.index') }}" class="text-accent">Barbeiros</a></li>
+    {% endif %}
     <li class="breadcrumb-item active text-muted">{{ barber.name }}</li>
   </ol>
 </nav>
@@ -64,6 +66,7 @@
       <a href="{{ url_for('barbers.edit', barber_id=barber.id) }}" class="btn btn-gold btn-sm">
         <i class="bi bi-pencil me-1"></i>Editar
       </a>
+      {% if current_user.is_admin %}
       <form method="POST" action="{{ url_for('barbers.toggle', barber_id=barber.id) }}" class="d-inline">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-sm {% if barber.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
@@ -71,6 +74,7 @@
           {% if barber.is_active %}Desativar{% else %}Ativar{% endif %}
         </button>
       </form>
+      {% endif %}
     </div>
   </div>
 </div>

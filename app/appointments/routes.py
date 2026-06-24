@@ -82,19 +82,26 @@ def index():
     )
 
 
-# ── Admin: Criar agendamento ──────────────────────────────────────────────────
+# ── Admin / Barber: Criar agendamento ────────────────────────────────────────
 @appointments_bp.route("/new", methods=["GET", "POST"])
 @login_required
-@admin_required
 def new():
+    if not current_user.is_admin and not current_user.is_barber:
+        flash("Acesso negado.", "danger")
+        return redirect(url_for("appointments.index"))
+
     from app.models.service_kit import ServiceKit
 
     form = AppointmentAdminForm()
 
     customers = Customer.query.order_by(Customer.name).all()
-    barbers   = Barber.query.filter_by(is_active=True).order_by(Barber.name).all()
     services  = Service.query.filter_by(is_active=True).order_by(Service.name).all()
     kits      = ServiceKit.query.filter_by(active=True).order_by(ServiceKit.name).all()
+
+    if current_user.is_barber and current_user.barber_profile:
+        barbers = [current_user.barber_profile]
+    else:
+        barbers = Barber.query.filter_by(is_active=True).order_by(Barber.name).all()
 
     form.customer_id.choices = [
         (c.id, f"{c.name}" + (f"  ·  {c.phone}" if c.phone else ""))
@@ -114,6 +121,13 @@ def new():
         flash("Não há serviços nem kits ativos.", "warning")
 
     if form.validate_on_submit():
+        # Barber sempre agenda para si mesmo
+        barber_id_to_use = (
+            current_user.barber_profile.id
+            if current_user.is_barber and current_user.barber_profile
+            else form.barber_id.data
+        )
+
         kit_id_raw = request.form.get("kit_id", "").strip()
         kit_id = int(kit_id_raw) if kit_id_raw else None
         service_id = form.service_id.data or None
@@ -135,7 +149,7 @@ def new():
             return render_template("appointments/form.html", form=form,
                                    barbers=barbers, services=services, kits=kits)
 
-        if not is_slot_available(form.barber_id.data, service_id, sched_date, sched_time,
+        if not is_slot_available(barber_id_to_use, service_id, sched_date, sched_time,
                                  kit_id=kit_id):
             flash("Horário indisponível: o barbeiro já tem um agendamento neste intervalo.", "danger")
             return render_template("appointments/form.html", form=form,
@@ -143,7 +157,7 @@ def new():
 
         appt = Appointment(
             customer_id=form.customer_id.data,
-            barber_id=form.barber_id.data,
+            barber_id=barber_id_to_use,
             service_id=service_id,
             kit_id=kit_id,
             scheduled_date=sched_date,
