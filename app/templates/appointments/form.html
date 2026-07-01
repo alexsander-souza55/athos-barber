@@ -22,7 +22,7 @@
       <input type="hidden" name="kit_id" id="kitIdInput" value="">
       <!-- Recorrência -->
       <input type="hidden" name="is_recurring" id="isRecurringInput" value="0">
-      <input type="hidden" name="recurring_months" id="recurringMonthsInput" value="1">
+      <input type="hidden" name="recurring_weeks" id="recurringWeeksInput" value="1">
 
       <!-- ═ Dados do agendamento ═══════════════════════════ -->
       <div class="card card-dark mb-4">
@@ -178,7 +178,7 @@
       <div class="card card-dark mb-4">
         <div class="card-header">
           <h6 class="fw-bold mb-0">
-            <i class="bi bi-arrow-repeat text-accent me-2"></i>Horário Fixo Mensal
+            <i class="bi bi-arrow-repeat text-accent me-2"></i>Horário Fixo Semanal
           </h6>
         </div>
         <div class="card-body p-4">
@@ -191,23 +191,23 @@
             </label>
           </div>
           <div class="form-text text-muted mt-1">
-            Repete todo mês no mesmo dia e horário.
+            Repete toda semana no mesmo dia e horário.
           </div>
 
           <!-- Opções expandidas -->
           <div id="recurringOptions" style="display:none;overflow:hidden;transition:all .2s">
             <div class="mt-3">
-              <p class="small fw-semibold mb-2">Por quantos meses?</p>
-              <div class="d-flex flex-wrap gap-2 align-items-center" id="monthPills">
-                <button type="button" class="month-pill" data-months="3">3 meses</button>
-                <button type="button" class="month-pill" data-months="6">6 meses</button>
-                <button type="button" class="month-pill" data-months="12">12 meses</button>
-                <button type="button" class="month-pill month-pill-custom" id="pillCustom" data-months="">Personalizado</button>
+              <p class="small fw-semibold mb-2">Por quantas semanas?</p>
+              <div class="d-flex flex-wrap gap-2 align-items-center" id="weekPills">
+                <button type="button" class="month-pill" data-weeks="4">4 semanas</button>
+                <button type="button" class="month-pill" data-weeks="8">8 semanas</button>
+                <button type="button" class="month-pill" data-weeks="12">12 semanas</button>
+                <button type="button" class="month-pill month-pill-custom" id="pillCustom" data-weeks="">Personalizado</button>
               </div>
-              <div id="customMonthsWrap" style="display:none;margin-top:10px">
-                <input type="number" id="customMonthsInput"
+              <div id="customWeeksWrap" style="display:none;margin-top:10px">
+                <input type="number" id="customWeeksInput"
                        class="form-control bg-dark border-secondary text-light"
-                       min="1" max="24" placeholder="1–24 meses"
+                       min="1" max="52" placeholder="1–52 semanas"
                        style="max-width:160px">
               </div>
               <div id="recurringPreview" class="recurring-preview mt-3" style="display:none"></div>
@@ -471,38 +471,40 @@ if (customerSel) customerSel.addEventListener('change', checkCredit);
 if (serviceSel)  serviceSel.addEventListener('change', checkCredit);
 
 // ── Recorrência ───────────────────────────────────────────
+const WEEKDAY_NAMES_PT = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+
 const recurringCheck   = document.getElementById('recurringCheck');
 const recurringOptions = document.getElementById('recurringOptions');
 const isRecurringInput = document.getElementById('isRecurringInput');
-const recurringMonthsInput = document.getElementById('recurringMonthsInput');
+const recurringWeeksInput = document.getElementById('recurringWeeksInput');
 const pills            = document.querySelectorAll('.month-pill');
 const pillCustom       = document.getElementById('pillCustom');
-const customWrap       = document.getElementById('customMonthsWrap');
-const customMonths     = document.getElementById('customMonthsInput');
+const customWeeksWrap  = document.getElementById('customWeeksWrap');
+const customWeeks      = document.getElementById('customWeeksInput');
 const recurringPreview = document.getElementById('recurringPreview');
 
-let selectedMonths = 0;
+let selectedWeeks = 0;
 
 function updateRecurringPreview() {
   if (!recurringPreview) return;
   const dateVal = dateInput ? dateInput.value : '';
   const timeVal = timeInput ? timeInput.value : '';
-  if (!selectedMonths || !dateVal || !timeVal) {
+  if (!selectedWeeks || !dateVal || !timeVal) {
     recurringPreview.style.display = 'none';
     return;
   }
   recurringPreview.style.display = 'block';
   const d = new Date(dateVal + 'T' + timeVal);
-  const day = d.getDate();
+  const weekdayName = WEEKDAY_NAMES_PT[d.getDay()];
   recurringPreview.innerHTML =
     `<i class="bi bi-info-circle me-1 text-accent"></i>` +
-    `Serão criados <strong>${selectedMonths + 1}</strong> agendamentos — ` +
-    `1 agora + ${selectedMonths} repetição(ões) mensais no dia <strong>${day}</strong> de cada mês.`;
+    `Serão criados <strong>${selectedWeeks + 1}</strong> agendamentos — ` +
+    `1 agora + ${selectedWeeks} repetição(ões), toda <strong>${weekdayName}</strong> às <strong>${timeVal}</strong>.`;
 }
 
-function setMonths(n) {
-  selectedMonths = n;
-  recurringMonthsInput.value = n;
+function setWeeks(n) {
+  selectedWeeks = n;
+  recurringWeeksInput.value = n;
   updateRecurringPreview();
 }
 
@@ -511,29 +513,29 @@ if (recurringCheck) {
     const on = this.checked;
     recurringOptions.style.display = on ? 'block' : 'none';
     isRecurringInput.value = on ? '1' : '0';
-    if (!on) { selectedMonths = 0; }
+    if (!on) { selectedWeeks = 0; }
   });
 }
 
 pills.forEach(p => {
   p.addEventListener('click', function () {
-    const months = parseInt(this.dataset.months, 10);
+    const weeks = parseInt(this.dataset.weeks, 10);
     pills.forEach(x => x.classList.remove('active'));
     this.classList.add('active');
     if (this.id === 'pillCustom') {
-      customWrap.style.display = 'block';
-      setMonths(parseInt(customMonths.value, 10) || 1);
+      customWeeksWrap.style.display = 'block';
+      setWeeks(parseInt(customWeeks.value, 10) || 1);
     } else {
-      customWrap.style.display = 'none';
-      setMonths(months);
+      customWeeksWrap.style.display = 'none';
+      setWeeks(weeks);
     }
   });
 });
 
-if (customMonths) {
-  customMonths.addEventListener('input', function () {
-    const v = Math.max(1, Math.min(24, parseInt(this.value, 10) || 1));
-    setMonths(v);
+if (customWeeks) {
+  customWeeks.addEventListener('input', function () {
+    const v = Math.max(1, Math.min(52, parseInt(this.value, 10) || 1));
+    setWeeks(v);
   });
 }
 

@@ -1,5 +1,4 @@
 import uuid
-import calendar as _calendar
 from datetime import date, datetime, timezone, timedelta
 from flask import (
     Blueprint, render_template, redirect, url_for,
@@ -85,13 +84,20 @@ def index():
 
 
 # ── Admin / Barber: Criar agendamento ────────────────────────────────────────
-def _add_months(d: date, months: int) -> date:
-    """Avança d por N meses, ajustando para último dia do mês se necessário."""
-    month = d.month - 1 + months
-    year = d.year + month // 12
-    month = month % 12 + 1
-    day = min(d.day, _calendar.monthrange(year, month)[1])
-    return d.replace(year=year, month=month, day=day)
+WEEKDAY_NAMES_PT = {
+    0: "segunda-feira",
+    1: "terça-feira",
+    2: "quarta-feira",
+    3: "quinta-feira",
+    4: "sexta-feira",
+    5: "sábado",
+    6: "domingo",
+}
+
+
+def _add_weeks(d: date, weeks: int) -> date:
+    """Avança d por N semanas, mantendo o mesmo dia da semana."""
+    return d + timedelta(weeks=weeks)
 
 
 @appointments_bp.route("/new", methods=["GET", "POST"])
@@ -174,12 +180,12 @@ def new():
 
         # Recorrência
         is_recurring = request.form.get("is_recurring") == "1"
-        recurring_months = 0
+        recurring_weeks = 0
         if is_recurring:
             try:
-                recurring_months = max(1, min(24, int(request.form.get("recurring_months", 1))))
+                recurring_weeks = max(1, min(52, int(request.form.get("recurring_weeks", 1))))
             except (ValueError, TypeError):
-                recurring_months = 1
+                recurring_weeks = 1
 
         # Verifica disponibilidade do slot inicial
         if not is_slot_available(barber_id_to_use, service_id, sched_date, sched_time,
@@ -192,15 +198,15 @@ def new():
         from app.subscriptions.service import consume_credit, consume_credit_kit
 
         group_id = str(uuid.uuid4()) if is_recurring else None
-        total_months = recurring_months if is_recurring else 0
+        total_weeks = recurring_weeks if is_recurring else 0
         created_count = 0
 
-        for offset in range(total_months + 1):
-            current_date = _add_months(sched_date, offset) if offset > 0 else sched_date
+        for offset in range(total_weeks + 1):
+            current_date = _add_weeks(sched_date, offset) if offset > 0 else sched_date
             if offset > 0 and not is_slot_available(
                 barber_id_to_use, service_id, current_date, sched_time, kit_id=kit_id
             ):
-                continue  # pula meses com conflito silenciosamente
+                continue  # pula semanas com conflito silenciosamente
 
             appt = Appointment(
                 customer_id=form.customer_id.data,
@@ -227,10 +233,11 @@ def new():
 
         if is_recurring and created_count > 1:
             customer = Customer.query.get(form.customer_id.data)
+            weekday_name = WEEKDAY_NAMES_PT[sched_date.weekday()]
             flash(
                 f"{created_count} agendamentos criados com sucesso para "
                 f"{customer.name if customer else 'o cliente'} — "
-                f"todo dia {sched_date.day} de cada mês, por {total_months} mês(es).",
+                f"toda {weekday_name} às {sched_time.strftime('%H:%M')}, por {total_weeks} semana(s).",
                 "success",
             )
         else:
